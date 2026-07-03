@@ -1,0 +1,65 @@
+// Prisma schema for Munich Kitas database
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Kita {
+  id           String   @id @default(cuid())
+  name         String
+  website      String?
+  cost         Decimal? @db.Decimal(10, 2)
+  latitude     Decimal  @db.Decimal(10, 8)
+  longitude    Decimal  @db.Decimal(11, 8)
+  hasVacancies Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  // userPreferences UserKitaPreference[]
+
+  @@index([latitude, longitude])
+}
+
+// model User {
+//   id        String   @id @default(cuid())
+//   email     String   @unique
+//   name      String?
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   // Relations
+//   kitaPreferences UserKitaPreference[]
+// }
+
+// model UserKitaPreference {
+//   id        String   @id @default(cuid())
+//   userId    String
+//   kitaId    String
+//   status    PreferenceStatus
+//   notes     String?
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   kita Kita @relation(fields: [kitaId], references: [id], onDelete: Cascade)
+
+//   @@unique([userId, kitaId])
+// }
+
+// enum PreferenceStatus {
+//   INTERESTED
+//   NOT_INTERESTED
+//   APPLIED
+//   ACCEPTED
+//   REJECTED
+// }
