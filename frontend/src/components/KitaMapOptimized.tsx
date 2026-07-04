@@ -1,11 +1,34 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+  ZoomControl,
+} from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useQuery } from "@tanstack/react-query";
-import { filterKitas, getUniqueTypes, getKitasByIds, fetchTargetedAvailability } from "#/data/db";
-import { Search, Filter, X, Mail, Heart, Copy, ExternalLink, ChevronLeft, ChevronRight, Calendar, MapPin, Plus, Trash2 } from "lucide-react";
+import {
+  filterKitas,
+  getUniqueTypes,
+  getKitasByIds,
+  fetchTargetedAvailability,
+} from "#/data/db";
+import {
+  Filter,
+  X,
+  Mail,
+  Heart,
+  Copy,
+  ExternalLink,
+  Calendar,
+  MapPin,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 // Munich city center coordinates
 const MUNICH_CENTER: [number, number] = [48.137154, 11.576124];
@@ -36,7 +59,6 @@ interface Kita {
 }
 
 interface Filters {
-  search: string;
   hasAvailability: boolean;
   barrierfree: boolean;
   integrational: boolean;
@@ -53,7 +75,7 @@ interface CustomLocation {
   name: string;
   latitude: number;
   longitude: number;
-  type: 'home' | 'work' | 'other';
+  type: "home" | "work" | "other";
 }
 
 // Create icon function that accounts for availability and favorite status
@@ -102,15 +124,15 @@ function MapClickHandler({
       onLocationClick(e.latlng.lat, e.latlng.lng);
     };
 
-    map.on('click', handleClick);
+    map.on("click", handleClick);
 
     // Change cursor to crosshair when adding location
     const container = map.getContainer();
-    container.style.cursor = 'crosshair';
+    container.style.cursor = "crosshair";
 
     return () => {
-      map.off('click', handleClick);
-      container.style.cursor = '';
+      map.off("click", handleClick);
+      container.style.cursor = "";
     };
   }, [isAddingLocation, map, onLocationClick]);
 
@@ -229,7 +251,7 @@ function MarkersLayer({
               font-size: 14px;
             ">${count}</div>
           `,
-          className: 'custom-cluster-icon',
+          className: "custom-cluster-icon",
           iconSize: [36, 36],
           iconAnchor: [18, 18],
         });
@@ -267,7 +289,8 @@ function MarkersLayer({
                 <p className="text-xs text-gray-500 mb-2">{kita.institution}</p>
 
                 {/* Show targeted availability if available, otherwise show general availability */}
-                {targetedAvailabilityMap && targetedAvailabilityMap.has(kita.id) ? (
+                {targetedAvailabilityMap &&
+                targetedAvailabilityMap.has(kita.id) ? (
                   <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mb-2">
                     {targetedAvailabilityMap.get(kita.id)} spots for your child
                   </span>
@@ -334,7 +357,6 @@ function MarkersLayer({
 
 export function KitaMap() {
   const [filters, setFilters] = useState<Filters>({
-    search: "",
     hasAvailability: false,
     barrierfree: false,
     integrational: false,
@@ -348,13 +370,14 @@ export function KitaMap() {
   const [customLocations, setCustomLocations] = useState<CustomLocation[]>([]);
   const [isAddingLocation, setIsAddingLocation] = useState(false);
   const [newLocationName, setNewLocationName] = useState("");
-  const [newLocationType, setNewLocationType] = useState<'home' | 'work' | 'other'>('home');
-  const [showFilters, setShowFilters] = useState(false);
+  const [newLocationType, setNewLocationType] = useState<
+    "home" | "work" | "other"
+  >("home");
+  const [activePanel, setActivePanel] = useState<'locations' | 'filters' | null>(null);
   const [visibleCount, setVisibleCount] = useState(0);
   const [selectedKitas, setSelectedKitas] = useState<Set<number>>(new Set());
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(false);
 
   // Debounced values for date filters
   const [debouncedBirthDate, setDebouncedBirthDate] = useState("");
@@ -373,9 +396,12 @@ export function KitaMap() {
   // Initialize selected kitas from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const savedParam = params.get('saved');
+    const savedParam = params.get("saved");
     if (savedParam) {
-      const ids = savedParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      const ids = savedParam
+        .split(",")
+        .map((id) => parseInt(id, 10))
+        .filter((id) => !isNaN(id));
       setSelectedKitas(new Set(ids));
     }
   }, []);
@@ -384,12 +410,17 @@ export function KitaMap() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (selectedKitas.size > 0) {
-      params.set('saved', Array.from(selectedKitas).sort((a, b) => a - b).join(','));
+      params.set(
+        "saved",
+        Array.from(selectedKitas)
+          .sort((a, b) => a - b)
+          .join(","),
+      );
     } else {
-      params.delete('saved');
+      params.delete("saved");
     }
-    const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-    window.history.replaceState({}, '', newUrl);
+    const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+    window.history.replaceState({}, "", newUrl);
   }, [selectedKitas]);
 
   // Helper to convert time string to milliseconds
@@ -400,31 +431,47 @@ export function KitaMap() {
   };
 
   // Calculate distance between two coordinates (Haversine formula)
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number => {
     const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
   // Check if kita is within distance of any custom location (memoized)
-  const isWithinDistance = useCallback((kita: any): boolean => {
-    if (!filters.maxDistanceKm || customLocations.length === 0) return true;
+  const isWithinDistance = useCallback(
+    (kita: any): boolean => {
+      if (!filters.maxDistanceKm || customLocations.length === 0) return true;
 
-    return customLocations.some(location =>
-      calculateDistance(kita.latitude, kita.longitude, location.latitude, location.longitude) <= filters.maxDistanceKm!
-    );
-  }, [filters.maxDistanceKm, customLocations]);
+      return customLocations.some(
+        (location) =>
+          calculateDistance(
+            kita.latitude,
+            kita.longitude,
+            location.latitude,
+            location.longitude,
+          ) <= filters.maxDistanceKm!,
+      );
+    },
+    [filters.maxDistanceKm, customLocations],
+  );
 
   // Add a custom location
   const handleAddLocation = (lat: number, lng: number) => {
     if (!newLocationName.trim()) {
-      alert('Please enter a name for this location');
+      alert("Please enter a name for this location");
       return;
     }
 
@@ -439,11 +486,11 @@ export function KitaMap() {
     setCustomLocations([...customLocations, newLocation]);
     setIsAddingLocation(false);
     setNewLocationName("");
-    setNewLocationType('home');
+    setNewLocationType("home");
   };
 
   const removeLocation = (id: string) => {
-    setCustomLocations(customLocations.filter(loc => loc.id !== id));
+    setCustomLocations(customLocations.filter((loc) => loc.id !== id));
   };
 
   // Fetch unique types for dropdown (only runs once)
@@ -461,11 +508,18 @@ export function KitaMap() {
     isFetching,
     error,
   } = useQuery({
-    queryKey: ["kitas-filtered", filters.search, filters.hasAvailability, filters.barrierfree, filters.integrational, filters.type, filters.opensBefore, filters.closesAfter],
+    queryKey: [
+      "kitas-filtered",
+      filters.hasAvailability,
+      filters.barrierfree,
+      filters.integrational,
+      filters.type,
+      filters.opensBefore,
+      filters.closesAfter,
+    ],
     queryFn: async () => {
       const start = performance.now();
       const result = await filterKitas({
-        search: filters.search || undefined,
         hasAvailability: filters.hasAvailability || undefined,
         barrierfree: filters.barrierfree || undefined,
         integrational: filters.integrational || undefined,
@@ -511,25 +565,30 @@ export function KitaMap() {
   });
 
   // Fetch targeted availability when birth date and start date are provided (using debounced values)
-  const { data: targetedAvailability, isFetching: isFetchingAvailability } = useQuery({
-    queryKey: ['targeted-availability', debouncedBirthDate, debouncedStartDate],
-    queryFn: async () => {
-      if (!debouncedBirthDate || !debouncedStartDate) return null;
+  const { data: targetedAvailability, isFetching: isFetchingAvailability } =
+    useQuery({
+      queryKey: [
+        "targeted-availability",
+        debouncedBirthDate,
+        debouncedStartDate,
+      ],
+      queryFn: async () => {
+        if (!debouncedBirthDate || !debouncedStartDate) return null;
 
-      // Convert YYYY-MM-DD to DD.MM.YY format
-      const formatDate = (dateStr: string) => {
-        const [year, month, day] = dateStr.split('-');
-        return `${day}.${month}.${year.slice(2)}`;
-      };
+        // Convert YYYY-MM-DD to DD.MM.YY format
+        const formatDate = (dateStr: string) => {
+          const [year, month, day] = dateStr.split("-");
+          return `${day}.${month}.${year.slice(2)}`;
+        };
 
-      return fetchTargetedAvailability(
-        formatDate(debouncedBirthDate),
-        formatDate(debouncedStartDate)
-      );
-    },
-    enabled: !!(debouncedBirthDate && debouncedStartDate),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
+        return fetchTargetedAvailability(
+          formatDate(debouncedBirthDate),
+          formatDate(debouncedStartDate),
+        );
+      },
+      enabled: !!(debouncedBirthDate && debouncedStartDate),
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
 
   // Create a map of kita ID to targeted availability
   const availabilityMap = new Map<number, number>();
@@ -543,7 +602,6 @@ export function KitaMap() {
 
   const resetFilters = () => {
     setFilters({
-      search: "",
       hasAvailability: false,
       barrierfree: false,
       integrational: false,
@@ -557,7 +615,6 @@ export function KitaMap() {
   };
 
   const activeFilterCount =
-    (filters.search ? 1 : 0) +
     (filters.hasAvailability ? 1 : 0) +
     (filters.barrierfree ? 1 : 0) +
     (filters.integrational ? 1 : 0) +
@@ -570,11 +627,11 @@ export function KitaMap() {
   const msToTime = (ms: number): string => {
     const hours = Math.floor(ms / (3600 * 1000));
     const minutes = Math.floor((ms % (3600 * 1000)) / (60 * 1000));
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
   };
 
   const toggleKitaSelection = (kitaId: number) => {
-    setSelectedKitas(prev => {
+    setSelectedKitas((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(kitaId)) {
         newSet.delete(kitaId);
@@ -587,16 +644,20 @@ export function KitaMap() {
 
   const getShareUrl = () => {
     const baseUrl = window.location.origin + window.location.pathname;
-    const ids = Array.from(selectedKitas).sort((a, b) => a - b).join(',');
+    const ids = Array.from(selectedKitas)
+      .sort((a, b) => a - b)
+      .join(",");
     return `${baseUrl}?saved=${ids}`;
   };
 
   // Memoize the sorted IDs to avoid unnecessary re-renders
-  const selectedKitasIds = Array.from(selectedKitas).sort((a, b) => a - b).join(',');
+  const selectedKitasIds = Array.from(selectedKitas)
+    .sort((a, b) => a - b)
+    .join(",");
 
   // Fetch selected kitas data for email - only when modal is open
   const { data: selectedKitasData } = useQuery({
-    queryKey: ['kitas-selected', selectedKitasIds],
+    queryKey: ["kitas-selected", selectedKitasIds],
     queryFn: async () => {
       if (selectedKitas.size === 0) return [];
       return getKitasByIds(Array.from(selectedKitas));
@@ -605,13 +666,13 @@ export function KitaMap() {
   });
 
   const createEmailBody = () => {
-    if (selectedKitas.size === 0 || !selectedKitasData) return '';
+    if (selectedKitas.size === 0 || !selectedKitasData) return "";
 
     const shareUrl = getShareUrl();
 
     let body = `Munich Kitas - My Shortlist (${selectedKitasData.length} kitas)\n\n`;
     body += `View this shortlist online:\n${shareUrl}\n\n`;
-    body += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    body += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
     selectedKitasData.forEach((kita: any, idx: number) => {
       body += `${idx + 1}. ${kita.name}\n`;
@@ -636,14 +697,14 @@ export function KitaMap() {
       }
 
       const features = [];
-      if (kita.barrierfree === 1) features.push('Barrier-free');
-      if (kita.integrational === 1) features.push('Integrational');
+      if (kita.barrierfree === 1) features.push("Barrier-free");
+      if (kita.integrational === 1) features.push("Integrational");
       if (features.length > 0) {
-        body += `   Features: ${features.join(', ')}\n`;
+        body += `   Features: ${features.join(", ")}\n`;
       }
 
       body += `   Google Maps: https://www.google.com/maps/search/?api=1&query=${kita.latitude},${kita.longitude}\n`;
-      body += '\n';
+      body += "\n";
     });
 
     return body;
@@ -656,7 +717,7 @@ export function KitaMap() {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      console.error("Failed to copy:", err);
     }
   };
 
@@ -700,213 +761,56 @@ export function KitaMap() {
         </div>
       )}
 
-      {/* Search and Filter Panel */}
+      {/* Filter Controls */}
       {!isLoading && (
         <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2 max-w-sm">
-          {/* Collapsible Filter Panel Content */}
-          <div className={`flex flex-col gap-2 transition-all duration-300 ${
-            isFilterPanelCollapsed ? 'hidden md:flex' : 'flex'
-          }`}>
-            {/* Search Bar */}
-            <div className="bg-white rounded-lg shadow-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Search className="w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by name, district, institution..."
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters({ ...filters, search: e.target.value })
-                  }
-                  className="flex-1 outline-none text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Filter Button */}
+          {/* Icon Buttons Row */}
+          <div className="flex gap-2">
+            {/* Location Button */}
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="bg-white rounded-lg shadow-lg p-3 flex items-center justify-between hover:bg-gray-50"
+              onClick={() => setActivePanel(activePanel === 'locations' ? null : 'locations')}
+              className={`relative bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors ${
+                activePanel === 'locations' ? 'ring-2 ring-purple-500' : ''
+              }`}
+              title="My Locations"
             >
-              <div className="flex items-center gap-2">
-                <Filter className="w-5 h-5" />
-                <span className="font-medium">Filters</span>
-                {activeFilterCount > 0 && (
-                  <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </div>
+              <MapPin className={`w-5 h-5 ${activePanel === 'locations' ? 'text-purple-600' : 'text-gray-700'}`} />
+              {customLocations.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {customLocations.length}
+                </span>
+              )}
             </button>
 
-            {/* Filter Panel */}
-            {showFilters && (
-              <div className="bg-white rounded-lg shadow-lg p-4 max-h-[70vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg">Filters</h3>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+            {/* Filters Button */}
+            <button
+              onClick={() => setActivePanel(activePanel === 'filters' ? null : 'filters')}
+              className={`relative bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors ${
+                activePanel === 'filters' ? 'ring-2 ring-blue-500' : ''
+              }`}
+              title="Filters"
+            >
+              <Filter className={`w-5 h-5 ${activePanel === 'filters' ? 'text-blue-600' : 'text-gray-700'}`} />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
 
-              {/* Checkboxes */}
-              <div className="space-y-3 mb-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.hasAvailability}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        hasAvailability: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm">Has Availability</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.barrierfree}
-                    onChange={(e) =>
-                      setFilters({ ...filters, barrierfree: e.target.checked })
-                    }
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm">Barrier-free</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.integrational}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        integrational: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm">Integrational</span>
-                </label>
-              </div>
-
-              {/* Type Dropdown */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Type</label>
-                <select
-                  value={filters.type}
-                  onChange={(e) =>
-                    setFilters({ ...filters, type: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                >
-                  <option value="">All Types</option>
-                  {uniqueTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Targeted Availability */}
-              <div className="mb-4 pb-4 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium">
-                    <Calendar className="w-4 h-4 inline mr-1" />
-                    Check Availability for Your Child
-                  </label>
-                  {(filters.birthDate || filters.startDate) && (
-                    <button
-                      onClick={() =>
-                        setFilters({
-                          ...filters,
-                          birthDate: "",
-                          startDate: "",
-                        })
-                      }
-                      className="text-xs text-blue-600 hover:text-blue-800"
-                    >
-                      Clear
-                    </button>
-                  )}
+          {/* Location Panel */}
+          {activePanel === 'locations' && (
+              <div className="bg-white rounded-lg shadow-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-base">My Locations</h3>
+                  <button
+                    onClick={() => setShowLocationPanel(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <p className="text-xs text-gray-500 mb-3">
-                  Get personalized availability based on your child's birth date and desired start date
-                </p>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Child's Birth Date
-                    </label>
-                    <input
-                      type="date"
-                      value={filters.birthDate}
-                      onChange={(e) =>
-                        setFilters({
-                          ...filters,
-                          birthDate: e.target.value,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Desired Start Date
-                    </label>
-                    <input
-                      type="date"
-                      value={filters.startDate}
-                      onChange={(e) =>
-                        setFilters({
-                          ...filters,
-                          startDate: e.target.value,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                    />
-                  </div>
-                  {filters.birthDate && filters.startDate && (
-                    <>
-                      {isFetchingAvailability ? (
-                        <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800 flex items-center gap-2">
-                          <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent" />
-                          Loading personalized availability...
-                        </div>
-                      ) : targetedAvailability && availabilityMap.size > 0 ? (
-                        <div className="bg-green-50 border border-green-200 rounded p-2 text-xs text-green-800">
-                          ✓ Showing personalized availability for {availabilityMap.size} kitas
-                        </div>
-                      ) : targetedAvailability && availabilityMap.size === 0 ? (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs text-yellow-800">
-                          No personalized availability found for these dates
-                        </div>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Custom Locations & Proximity Filter */}
-              <div className="mb-4 pb-4 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium">
-                    <MapPin className="w-4 h-4 inline mr-1" />
-                    My Locations
-                  </label>
-                </div>
-                <p className="text-xs text-gray-500 mb-3">
-                  Add home, work, or other locations to filter by proximity
-                </p>
 
                 {/* List of custom locations */}
                 {customLocations.length > 0 && (
@@ -918,11 +822,16 @@ export function KitaMap() {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <MapPin className="w-3 h-3 text-gray-500" />
-                            <span className="text-sm font-medium">{location.name}</span>
+                            <span className="text-sm font-medium">
+                              {location.name}
+                            </span>
                           </div>
-                          <span className="text-xs text-gray-500 ml-5">
-                            {location.type === 'home' ? '🏠 Home' : location.type === 'work' ? '💼 Work' : '📍 Other'}
+                          <span className="text-xs text-gray-500">
+                            {location.type === "home"
+                              ? "🏠 Home"
+                              : location.type === "work"
+                                ? "💼 Work"
+                                : "📍 Other"}
                           </span>
                         </div>
                         <button
@@ -940,7 +849,7 @@ export function KitaMap() {
                 {isAddingLocation ? (
                   <div className="bg-blue-50 border border-blue-200 rounded p-3 space-y-2">
                     <p className="text-xs text-blue-800 font-medium">
-                      Click on the map to set the location
+                      📍 Click on the map to set the location
                     </p>
                     <input
                       type="text"
@@ -948,10 +857,15 @@ export function KitaMap() {
                       value={newLocationName}
                       onChange={(e) => setNewLocationName(e.target.value)}
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                      autoFocus
                     />
                     <select
                       value={newLocationType}
-                      onChange={(e) => setNewLocationType(e.target.value as 'home' | 'work' | 'other')}
+                      onChange={(e) =>
+                        setNewLocationType(
+                          e.target.value as "home" | "work" | "other",
+                        )
+                      }
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                     >
                       <option value="home">🏠 Home</option>
@@ -981,8 +895,8 @@ export function KitaMap() {
                 {/* Distance filter */}
                 {customLocations.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Maximum Distance (km)
+                    <label className="block text-xs text-gray-600 mb-1 font-medium">
+                      Max Distance (km)
                     </label>
                     <div className="flex items-center gap-2">
                       <input
@@ -994,10 +908,12 @@ export function KitaMap() {
                         onChange={(e) =>
                           setFilters({
                             ...filters,
-                            maxDistanceKm: e.target.value ? parseFloat(e.target.value) : null,
+                            maxDistanceKm: e.target.value
+                              ? parseFloat(e.target.value)
+                              : null,
                           })
                         }
-                        placeholder="Any distance"
+                        placeholder="Any"
                         className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
                       />
                       {filters.maxDistanceKm && (
@@ -1016,166 +932,329 @@ export function KitaMap() {
                     </div>
                     {filters.maxDistanceKm && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Showing kitas within {filters.maxDistanceKm}km of your locations
+                        Within {filters.maxDistanceKm}km
                       </p>
                     )}
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Opening Hours */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium">
-                    Opening Hours
-                  </label>
-                  {(filters.opensBefore || filters.closesAfter) && (
-                    <button
-                      onClick={() =>
+          {/* Filter Panel */}
+          {activePanel === 'filters' && (
+              <div className="bg-white rounded-lg shadow-lg p-4 max-h-[70vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg">Filters</h3>
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Checkboxes */}
+                <div className="space-y-3 mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.hasAvailability}
+                      onChange={(e) =>
                         setFilters({
                           ...filters,
-                          opensBefore: "",
-                          closesAfter: "",
+                          hasAvailability: e.target.checked,
                         })
                       }
-                      className="text-xs text-blue-600 hover:text-blue-800"
-                    >
-                      Clear
-                    </button>
-                  )}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Has Availability</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.barrierfree}
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          barrierfree: e.target.checked,
+                        })
+                      }
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Barrier-free</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.integrational}
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          integrational: e.target.checked,
+                        })
+                      }
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Integrational</span>
+                  </label>
                 </div>
 
-                <div className="space-y-3">
-                  {/* Opens before */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Opens before
+                {/* Type Dropdown */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Type</label>
+                  <select
+                    value={filters.type}
+                    onChange={(e) =>
+                      setFilters({ ...filters, type: e.target.value })
+                    }
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  >
+                    <option value="">All Types</option>
+                    {uniqueTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Targeted Availability */}
+                <div className="mb-4 pb-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium">
+                      <Calendar className="w-4 h-4 inline mr-1" />
+                      Check Availability for Your Child
                     </label>
-                    <div className="flex items-center gap-2">
+                    {(filters.birthDate || filters.startDate) && (
                       <button
-                        type="button"
-                        onClick={() => {
-                          const current = filters.opensBefore || "08:00";
-                          const [h, m] = current.split(":").map(Number);
-                          let totalMins = h * 60 + m - 15;
-                          if (totalMins < 0) totalMins = 0;
-                          const newH = Math.floor(totalMins / 60);
-                          const newM = totalMins % 60;
+                        onClick={() =>
                           setFilters({
                             ...filters,
-                            opensBefore: `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`,
-                          });
-                        }}
-                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                            birthDate: "",
+                            startDate: "",
+                          })
+                        }
+                        className="text-xs text-blue-600 hover:text-blue-800"
                       >
-                        −
+                        Clear
                       </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Get personalized availability based on your child's birth
+                    date and desired start date
+                  </p>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Child's Birth Date
+                      </label>
                       <input
-                        type="time"
-                        value={filters.opensBefore || ""}
+                        type="date"
+                        value={filters.birthDate}
                         onChange={(e) =>
                           setFilters({
                             ...filters,
-                            opensBefore: e.target.value,
+                            birthDate: e.target.value,
                           })
                         }
-                        placeholder="--:--"
-                        className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm text-center"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const current = filters.opensBefore || "08:00";
-                          const [h, m] = current.split(":").map(Number);
-                          let totalMins = h * 60 + m + 15;
-                          if (totalMins > 1440) totalMins = 1440;
-                          const newH = Math.floor(totalMins / 60);
-                          const newM = totalMins % 60;
-                          setFilters({
-                            ...filters,
-                            opensBefore: `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`,
-                          });
-                        }}
-                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
-                      >
-                        +
-                      </button>
                     </div>
-                  </div>
-
-                  {/* Closes after */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Closes after
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const current = filters.closesAfter || "17:00";
-                          const [h, m] = current.split(":").map(Number);
-                          let totalMins = h * 60 + m - 15;
-                          if (totalMins < 0) totalMins = 0;
-                          const newH = Math.floor(totalMins / 60);
-                          const newM = totalMins % 60;
-                          setFilters({
-                            ...filters,
-                            closesAfter: `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`,
-                          });
-                        }}
-                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
-                      >
-                        −
-                      </button>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Desired Start Date
+                      </label>
                       <input
-                        type="time"
-                        value={filters.closesAfter || ""}
+                        type="date"
+                        value={filters.startDate}
                         onChange={(e) =>
                           setFilters({
                             ...filters,
-                            closesAfter: e.target.value,
+                            startDate: e.target.value,
                           })
                         }
-                        placeholder="--:--"
-                        className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm text-center"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                       />
+                    </div>
+                    {filters.birthDate && filters.startDate && (
+                      <>
+                        {isFetchingAvailability ? (
+                          <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800 flex items-center gap-2">
+                            <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent" />
+                            Loading personalized availability...
+                          </div>
+                        ) : targetedAvailability && availabilityMap.size > 0 ? (
+                          <div className="bg-green-50 border border-green-200 rounded p-2 text-xs text-green-800">
+                            ✓ Showing personalized availability for{" "}
+                            {availabilityMap.size} kitas
+                          </div>
+                        ) : targetedAvailability &&
+                          availabilityMap.size === 0 ? (
+                          <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs text-yellow-800">
+                            No personalized availability found for these dates
+                          </div>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Opening Hours */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium">
+                      Opening Hours
+                    </label>
+                    {(filters.opensBefore || filters.closesAfter) && (
                       <button
-                        type="button"
-                        onClick={() => {
-                          const current = filters.closesAfter || "17:00";
-                          const [h, m] = current.split(":").map(Number);
-                          let totalMins = h * 60 + m + 15;
-                          if (totalMins > 1440) totalMins = 1440;
-                          const newH = Math.floor(totalMins / 60);
-                          const newM = totalMins % 60;
+                        onClick={() =>
                           setFilters({
                             ...filters,
-                            closesAfter: `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`,
-                          });
-                        }}
-                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                            opensBefore: "",
+                            closesAfter: "",
+                          })
+                        }
+                        className="text-xs text-blue-600 hover:text-blue-800"
                       >
-                        +
+                        Clear
                       </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Opens before */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Opens before
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = filters.opensBefore || "08:00";
+                            const [h, m] = current.split(":").map(Number);
+                            let totalMins = h * 60 + m - 15;
+                            if (totalMins < 0) totalMins = 0;
+                            const newH = Math.floor(totalMins / 60);
+                            const newM = totalMins % 60;
+                            setFilters({
+                              ...filters,
+                              opensBefore: `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`,
+                            });
+                          }}
+                          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="time"
+                          value={filters.opensBefore || ""}
+                          onChange={(e) =>
+                            setFilters({
+                              ...filters,
+                              opensBefore: e.target.value,
+                            })
+                          }
+                          placeholder="--:--"
+                          className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm text-center"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = filters.opensBefore || "08:00";
+                            const [h, m] = current.split(":").map(Number);
+                            let totalMins = h * 60 + m + 15;
+                            if (totalMins > 1440) totalMins = 1440;
+                            const newH = Math.floor(totalMins / 60);
+                            const newM = totalMins % 60;
+                            setFilters({
+                              ...filters,
+                              opensBefore: `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`,
+                            });
+                          }}
+                          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Closes after */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Closes after
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = filters.closesAfter || "17:00";
+                            const [h, m] = current.split(":").map(Number);
+                            let totalMins = h * 60 + m - 15;
+                            if (totalMins < 0) totalMins = 0;
+                            const newH = Math.floor(totalMins / 60);
+                            const newM = totalMins % 60;
+                            setFilters({
+                              ...filters,
+                              closesAfter: `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`,
+                            });
+                          }}
+                          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="time"
+                          value={filters.closesAfter || ""}
+                          onChange={(e) =>
+                            setFilters({
+                              ...filters,
+                              closesAfter: e.target.value,
+                            })
+                          }
+                          placeholder="--:--"
+                          className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm text-center"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = filters.closesAfter || "17:00";
+                            const [h, m] = current.split(":").map(Number);
+                            let totalMins = h * 60 + m + 15;
+                            if (totalMins > 1440) totalMins = 1440;
+                            const newH = Math.floor(totalMins / 60);
+                            const newM = totalMins % 60;
+                            setFilters({
+                              ...filters,
+                              closesAfter: `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`,
+                            });
+                          }}
+                          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Reset Button */}
+                <button
+                  onClick={resetFilters}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded"
+                >
+                  Reset Filters
+                </button>
               </div>
-
-              {/* Reset Button */}
-              <button
-                onClick={resetFilters}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded"
-              >
-                Reset Filters
-              </button>
-            </div>
             )}
-          </div>
 
-          {/* Results Count with Collapse Toggle */}
-          <div className="bg-white rounded-lg shadow-lg p-3 flex items-center justify-between gap-2">
-            <p className="text-sm text-gray-600 flex-1">
+          {/* Results Count */}
+          <div className="bg-white rounded-lg shadow-lg p-3">
+            <p className="text-sm text-gray-600">
               Showing{" "}
               <span className="font-bold text-gray-900">{visibleCount}</span> of{" "}
               <span className="font-bold text-gray-900">
@@ -1188,17 +1267,6 @@ export function KitaMap() {
                 </span>
               )}
             </p>
-            <button
-              onClick={() => setIsFilterPanelCollapsed(!isFilterPanelCollapsed)}
-              className="md:hidden p-1 hover:bg-gray-100 rounded flex-shrink-0"
-              aria-label={isFilterPanelCollapsed ? "Expand filters" : "Collapse filters"}
-            >
-              {isFilterPanelCollapsed ? (
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              ) : (
-                <ChevronLeft className="w-4 h-4 text-gray-600" />
-              )}
-            </button>
           </div>
         </div>
       )}
@@ -1230,7 +1298,7 @@ export function KitaMap() {
             className: "custom-location-marker",
             html: `
               <div style="
-                background-color: ${location.type === 'home' ? '#ef4444' : location.type === 'work' ? '#3b82f6' : '#8b5cf6'};
+                background-color: ${location.type === "home" ? "#ef4444" : location.type === "work" ? "#3b82f6" : "#8b5cf6"};
                 width: 32px;
                 height: 32px;
                 border-radius: 50% 50% 50% 0;
@@ -1245,7 +1313,7 @@ export function KitaMap() {
                   transform: rotate(45deg);
                   font-size: 16px;
                 ">
-                  ${location.type === 'home' ? '🏠' : location.type === 'work' ? '💼' : '📍'}
+                  ${location.type === "home" ? "🏠" : location.type === "work" ? "💼" : "📍"}
                 </span>
               </div>
             `,
@@ -1264,7 +1332,11 @@ export function KitaMap() {
                 <div className="p-2">
                   <h3 className="font-bold text-sm mb-1">{location.name}</h3>
                   <p className="text-xs text-gray-600">
-                    {location.type === 'home' ? '🏠 Home' : location.type === 'work' ? '💼 Work' : '📍 Other'}
+                    {location.type === "home"
+                      ? "🏠 Home"
+                      : location.type === "work"
+                        ? "💼 Work"
+                        : "📍 Other"}
                   </p>
                 </div>
               </Popup>
@@ -1291,7 +1363,7 @@ export function KitaMap() {
           className="fixed bottom-6 right-6 z-1000 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 transition-all"
         >
           <Mail className="w-5 h-5" />
-          Email {selectedKitas.size} location{selectedKitas.size > 1 ? "s" : ""} to myself
+          Email {selectedKitas.size} location{selectedKitas.size > 1 ? "s" : ""}
         </button>
       )}
 
