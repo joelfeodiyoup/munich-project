@@ -424,14 +424,17 @@ export function KitaMap() {
     return `${baseUrl}?saved=${ids}`;
   };
 
-  // Fetch selected kitas data for email
+  // Memoize the sorted IDs to avoid unnecessary re-renders
+  const selectedKitasIds = Array.from(selectedKitas).sort((a, b) => a - b).join(',');
+
+  // Fetch selected kitas data for email - only when modal is open
   const { data: selectedKitasData } = useQuery({
-    queryKey: ['kitas-selected', Array.from(selectedKitas).sort()],
+    queryKey: ['kitas-selected', selectedKitasIds],
     queryFn: async () => {
       if (selectedKitas.size === 0) return [];
       return getKitasByIds(Array.from(selectedKitas));
     },
-    enabled: selectedKitas.size > 0,
+    enabled: selectedKitas.size > 0 && showEmailModal,
   });
 
   const createEmailBody = () => {
