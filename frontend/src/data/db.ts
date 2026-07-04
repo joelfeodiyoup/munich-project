@@ -279,3 +279,18 @@ export async function filterKitas(filters: KitaFilters) {
 
   return query(sql, params);
 }
+
+export async function getKitasByIds(ids: number[]) {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const placeholders = ids.map(() => '?').join(',');
+  const sql = `
+    SELECT * FROM kitas
+    WHERE id IN (${placeholders})
+    ORDER BY name
+  `;
+
+  return query(sql, ids);
+}

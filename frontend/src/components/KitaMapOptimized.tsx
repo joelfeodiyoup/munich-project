@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useQuery } from "@tanstack/react-query";
-import { filterKitas, getUniqueTypes } from "#/data/db";
-import { Search, Filter, X, Mail, Heart, Copy, ExternalLink } from "lucide-react";
+import { filterKitas, getUniqueTypes, getKitasByIds } from "#/data/db";
+import { Search, Filter, X, Mail, Heart, Copy, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Munich city center coordinates
 const MUNICH_CENTER: [number, number] = [48.137154, 11.576124];
@@ -297,6 +297,7 @@ export function KitaMap() {
   const [selectedKitas, setSelectedKitas] = useState<Set<number>>(new Set());
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(false);
 
   // Initialize selected kitas from URL on mount
   useEffect(() => {
@@ -423,17 +424,26 @@ export function KitaMap() {
     return `${baseUrl}?saved=${ids}`;
   };
 
-  const createEmailBody = () => {
-    if (selectedKitas.size === 0 || !filteredKitas) return '';
+  // Fetch selected kitas data for email
+  const { data: selectedKitasData } = useQuery({
+    queryKey: ['kitas-selected', Array.from(selectedKitas).sort()],
+    queryFn: async () => {
+      if (selectedKitas.size === 0) return [];
+      return getKitasByIds(Array.from(selectedKitas));
+    },
+    enabled: selectedKitas.size > 0,
+  });
 
-    const selected = filteredKitas.filter(k => selectedKitas.has(k.id));
+  const createEmailBody = () => {
+    if (selectedKitas.size === 0 || !selectedKitasData) return '';
+
     const shareUrl = getShareUrl();
 
-    let body = `Munich Kitas - My Shortlist (${selected.length} kitas)\n\n`;
+    let body = `Munich Kitas - My Shortlist (${selectedKitasData.length} kitas)\n\n`;
     body += `View this shortlist online:\n${shareUrl}\n\n`;
     body += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
 
-    selected.forEach((kita, idx) => {
+    selectedKitasData.forEach((kita: any, idx: number) => {
       body += `${idx + 1}. ${kita.name}\n`;
       body += `   Institution: ${kita.institution}\n`;
 
@@ -523,41 +533,45 @@ export function KitaMap() {
       {/* Search and Filter Panel */}
       {!isLoading && (
         <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2 max-w-sm">
-          {/* Search Bar */}
-          <div className="bg-white rounded-lg shadow-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Search className="w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name, district, institution..."
-                value={filters.search}
-                onChange={(e) =>
-                  setFilters({ ...filters, search: e.target.value })
-                }
-                className="flex-1 outline-none text-sm"
-              />
+          {/* Collapsible Filter Panel Content */}
+          <div className={`flex flex-col gap-2 transition-all duration-300 ${
+            isFilterPanelCollapsed ? 'hidden md:flex' : 'flex'
+          }`}>
+            {/* Search Bar */}
+            <div className="bg-white rounded-lg shadow-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Search className="w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name, district, institution..."
+                  value={filters.search}
+                  onChange={(e) =>
+                    setFilters({ ...filters, search: e.target.value })
+                  }
+                  className="flex-1 outline-none text-sm"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Filter Button */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="bg-white rounded-lg shadow-lg p-3 flex items-center justify-between hover:bg-gray-50"
-          >
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              <span className="font-medium">Filters</span>
-              {activeFilterCount > 0 && (
-                <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-                  {activeFilterCount}
-                </span>
-              )}
-            </div>
-          </button>
+            {/* Filter Button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="bg-white rounded-lg shadow-lg p-3 flex items-center justify-between hover:bg-gray-50"
+            >
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                <span className="font-medium">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </div>
+            </button>
 
-          {/* Filter Panel */}
-          {showFilters && (
-            <div className="bg-white rounded-lg shadow-lg p-4 max-h-[70vh] overflow-y-auto">
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="bg-white rounded-lg shadow-lg p-4 max-h-[70vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-lg">Filters</h3>
                 <button
@@ -779,11 +793,12 @@ export function KitaMap() {
                 Reset Filters
               </button>
             </div>
-          )}
+            )}
+          </div>
 
-          {/* Results Count */}
-          <div className="bg-white rounded-lg shadow-lg p-3">
-            <p className="text-sm text-gray-600">
+          {/* Results Count with Collapse Toggle */}
+          <div className="bg-white rounded-lg shadow-lg p-3 flex items-center justify-between gap-2">
+            <p className="text-sm text-gray-600 flex-1">
               Showing{" "}
               <span className="font-bold text-gray-900">{visibleCount}</span> of{" "}
               <span className="font-bold text-gray-900">
@@ -796,6 +811,17 @@ export function KitaMap() {
                 </span>
               )}
             </p>
+            <button
+              onClick={() => setIsFilterPanelCollapsed(!isFilterPanelCollapsed)}
+              className="md:hidden p-1 hover:bg-gray-100 rounded flex-shrink-0"
+              aria-label={isFilterPanelCollapsed ? "Expand filters" : "Collapse filters"}
+            >
+              {isFilterPanelCollapsed ? (
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              ) : (
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
           </div>
         </div>
       )}
@@ -805,12 +831,15 @@ export function KitaMap() {
         center={MUNICH_CENTER}
         zoom={12}
         style={{ height: "100%", width: "100%" }}
-        zoomControl={true}
+        zoomControl={false}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {/* Zoom control on the right side */}
+        <ZoomControl position="topright" />
 
         {/* Native Leaflet markers for performance */}
         {filteredKitas && (
