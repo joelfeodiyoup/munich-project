@@ -28,7 +28,6 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
-  // For GitHub Pages with repo name: /repo-name/
-  // Change this to your repo name or '/' if deploying to username.github.io
-  base: '/',
+  // For GitHub Pages: https://joelfeodiyoup.github.io/munich-project/
+  base: '/munich-project/',
 });
