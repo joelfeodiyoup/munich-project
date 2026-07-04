@@ -294,3 +294,44 @@ export async function getKitasByIds(ids: number[]) {
 
   return query(sql, ids);
 }
+
+interface AvailabilityResponse {
+  dayCareId: number;
+  predecessor?: {
+    availability?: number;
+    referenceDate: [number, number, number];
+  };
+  current?: {
+    availability?: number;
+    referenceDate: [number, number, number];
+  };
+  successor?: {
+    availability?: number;
+    referenceDate: [number, number, number];
+  };
+}
+
+export async function fetchTargetedAvailability(
+  birthDate: string, // format: DD.MM.YY
+  beginDate: string  // format: DD.MM.YY
+): Promise<AvailabilityResponse[]> {
+  const targetUrl = `https://kitafinder.muenchen.de/elternportal/en/api/verfuegbarkeiten?geburtsdatum=${birthDate}&beginn=${beginDate}`;
+
+  // Use CORS proxy to avoid CORS errors in browser
+  // See CORS_PROXY_SETUP.md for production alternatives
+  const corsProxy = import.meta.env.VITE_CORS_PROXY || 'https://corsproxy.io/?';
+  const url = `${corsProxy}${encodeURIComponent(targetUrl)}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch availability: ${response.statusText}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching targeted availability:', error);
+    console.log('Target URL was:', targetUrl);
+    console.log('See CORS_PROXY_SETUP.md for setup instructions');
+    throw error;
+  }
+}

@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useQuery } from "@tanstack/react-query";
-import { filterKitas, getUniqueTypes, getKitasByIds } from "#/data/db";
-import { Search, Filter, X, Mail, Heart, Copy, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { filterKitas, getUniqueTypes, getKitasByIds, fetchTargetedAvailability } from "#/data/db";
+import { Search, Filter, X, Mail, Heart, Copy, ExternalLink, ChevronLeft, ChevronRight, Calendar, MapPin, Plus, Trash2 } from "lucide-react";
 
 // Munich city center coordinates
 const MUNICH_CENTER: [number, number] = [48.137154, 11.576124];
@@ -43,6 +43,17 @@ interface Filters {
   type: string;
   opensBefore: string;
   closesAfter: string;
+  birthDate: string;
+  startDate: string;
+  maxDistanceKm: number | null;
+}
+
+interface CustomLocation {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  type: 'home' | 'work' | 'other';
 }
 
 // Create icon function that accounts for availability and favorite status
@@ -74,17 +85,51 @@ const createMarkerIcon = (hasAvailability: boolean, isFavorite: boolean) => {
   });
 };
 
+// Component to handle map click for adding custom locations
+function MapClickHandler({
+  isAddingLocation,
+  onLocationClick,
+}: {
+  isAddingLocation: boolean;
+  onLocationClick: (lat: number, lng: number) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!isAddingLocation) return;
+
+    const handleClick = (e: any) => {
+      onLocationClick(e.latlng.lat, e.latlng.lng);
+    };
+
+    map.on('click', handleClick);
+
+    // Change cursor to crosshair when adding location
+    const container = map.getContainer();
+    container.style.cursor = 'crosshair';
+
+    return () => {
+      map.off('click', handleClick);
+      container.style.cursor = '';
+    };
+  }, [isAddingLocation, map, onLocationClick]);
+
+  return null;
+}
+
 // Component that manages viewport-filtered markers with clustering
 function MarkersLayer({
   kitas,
   onVisibleCountChange,
   selectedKitas,
   toggleKitaSelection,
+  targetedAvailabilityMap,
 }: {
   kitas: Kita[];
   onVisibleCountChange: (count: number) => void;
   selectedKitas: Set<number>;
   toggleKitaSelection: (kitaId: number) => void;
+  targetedAvailabilityMap?: Map<number, number>;
 }) {
   const map = useMap();
   const isInitialLoadRef = useRef(true);
@@ -221,7 +266,12 @@ function MarkersLayer({
                 </div>
                 <p className="text-xs text-gray-500 mb-2">{kita.institution}</p>
 
-                {kita.current_availability > 0 ? (
+                {/* Show targeted availability if available, otherwise show general availability */}
+                {targetedAvailabilityMap && targetedAvailabilityMap.has(kita.id) ? (
+                  <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mb-2">
+                    {targetedAvailabilityMap.get(kita.id)} spots for your child
+                  </span>
+                ) : kita.current_availability > 0 ? (
                   <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mb-2">
                     {kita.current_availability} spots available
                   </span>
@@ -291,13 +341,34 @@ export function KitaMap() {
     type: "",
     opensBefore: "",
     closesAfter: "",
+    birthDate: "",
+    startDate: "",
+    maxDistanceKm: null,
   });
+  const [customLocations, setCustomLocations] = useState<CustomLocation[]>([]);
+  const [isAddingLocation, setIsAddingLocation] = useState(false);
+  const [newLocationName, setNewLocationName] = useState("");
+  const [newLocationType, setNewLocationType] = useState<'home' | 'work' | 'other'>('home');
   const [showFilters, setShowFilters] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
   const [selectedKitas, setSelectedKitas] = useState<Set<number>>(new Set());
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isFilterPanelCollapsed, setIsFilterPanelCollapsed] = useState(false);
+
+  // Debounced values for date filters
+  const [debouncedBirthDate, setDebouncedBirthDate] = useState("");
+  const [debouncedStartDate, setDebouncedStartDate] = useState("");
+
+  // Debounce the date inputs
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedBirthDate(filters.birthDate);
+      setDebouncedStartDate(filters.startDate);
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [filters.birthDate, filters.startDate]);
 
   // Initialize selected kitas from URL on mount
   useEffect(() => {
@@ -328,20 +399,69 @@ export function KitaMap() {
     return (hours * 3600 + minutes * 60) * 1000;
   };
 
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Check if kita is within distance of any custom location (memoized)
+  const isWithinDistance = useCallback((kita: any): boolean => {
+    if (!filters.maxDistanceKm || customLocations.length === 0) return true;
+
+    return customLocations.some(location =>
+      calculateDistance(kita.latitude, kita.longitude, location.latitude, location.longitude) <= filters.maxDistanceKm!
+    );
+  }, [filters.maxDistanceKm, customLocations]);
+
+  // Add a custom location
+  const handleAddLocation = (lat: number, lng: number) => {
+    if (!newLocationName.trim()) {
+      alert('Please enter a name for this location');
+      return;
+    }
+
+    const newLocation: CustomLocation = {
+      id: Date.now().toString(),
+      name: newLocationName,
+      latitude: lat,
+      longitude: lng,
+      type: newLocationType,
+    };
+
+    setCustomLocations([...customLocations, newLocation]);
+    setIsAddingLocation(false);
+    setNewLocationName("");
+    setNewLocationType('home');
+  };
+
+  const removeLocation = (id: string) => {
+    setCustomLocations(customLocations.filter(loc => loc.id !== id));
+  };
+
   // Fetch unique types for dropdown (only runs once)
   const { data: uniqueTypes = [] } = useQuery({
     queryKey: ["kitas-unique-types"],
     queryFn: getUniqueTypes,
+    staleTime: Infinity, // Never goes stale - types don't change
+    gcTime: Infinity, // Never garbage collect
   });
 
   // Fetch filtered kitas using SQL (runs on every filter change)
   const {
-    data: filteredKitas,
+    data: sqlFilteredKitas,
     isLoading,
     isFetching,
     error,
   } = useQuery({
-    queryKey: ["kitas-filtered", filters],
+    queryKey: ["kitas-filtered", filters.search, filters.hasAvailability, filters.barrierfree, filters.integrational, filters.type, filters.opensBefore, filters.closesAfter],
     queryFn: async () => {
       const start = performance.now();
       const result = await filterKitas({
@@ -363,9 +483,18 @@ export function KitaMap() {
       );
       return result;
     },
-    staleTime: 0,
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes - data doesn't change often
+    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnMount: false, // Don't refetch on component remount if we have cached data
     placeholderData: (previousData) => previousData,
   });
+
+  // Apply distance filter on the client side (memoized to avoid recalculating on every render)
+  const filteredKitas = useMemo(() => {
+    if (!sqlFilteredKitas) return undefined;
+    return sqlFilteredKitas.filter(isWithinDistance);
+  }, [sqlFilteredKitas, isWithinDistance]);
 
   // Get count of all kitas for display (cheap query)
   const { data: totalCount = 0 } = useQuery({
@@ -377,7 +506,40 @@ export function KitaMap() {
       );
       return (result[0]?.values[0]?.[0] as number) || 0;
     },
+    staleTime: Infinity, // Never changes
+    gcTime: Infinity,
   });
+
+  // Fetch targeted availability when birth date and start date are provided (using debounced values)
+  const { data: targetedAvailability, isFetching: isFetchingAvailability } = useQuery({
+    queryKey: ['targeted-availability', debouncedBirthDate, debouncedStartDate],
+    queryFn: async () => {
+      if (!debouncedBirthDate || !debouncedStartDate) return null;
+
+      // Convert YYYY-MM-DD to DD.MM.YY format
+      const formatDate = (dateStr: string) => {
+        const [year, month, day] = dateStr.split('-');
+        return `${day}.${month}.${year.slice(2)}`;
+      };
+
+      return fetchTargetedAvailability(
+        formatDate(debouncedBirthDate),
+        formatDate(debouncedStartDate)
+      );
+    },
+    enabled: !!(debouncedBirthDate && debouncedStartDate),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Create a map of kita ID to targeted availability
+  const availabilityMap = new Map<number, number>();
+  if (targetedAvailability) {
+    targetedAvailability.forEach((item) => {
+      if (item.current?.availability) {
+        availabilityMap.set(item.dayCareId, item.current.availability);
+      }
+    });
+  }
 
   const resetFilters = () => {
     setFilters({
@@ -388,6 +550,9 @@ export function KitaMap() {
       type: "",
       opensBefore: "",
       closesAfter: "",
+      birthDate: "",
+      startDate: "",
+      maxDistanceKm: null,
     });
   };
 
@@ -398,7 +563,9 @@ export function KitaMap() {
     (filters.integrational ? 1 : 0) +
     (filters.type ? 1 : 0) +
     (filters.opensBefore ? 1 : 0) +
-    (filters.closesAfter ? 1 : 0);
+    (filters.closesAfter ? 1 : 0) +
+    (filters.birthDate && filters.startDate ? 1 : 0) +
+    (filters.maxDistanceKm ? 1 : 0);
 
   const msToTime = (ms: number): string => {
     const hours = Math.floor(ms / (3600 * 1000));
@@ -649,6 +816,213 @@ export function KitaMap() {
                 </select>
               </div>
 
+              {/* Targeted Availability */}
+              <div className="mb-4 pb-4 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    Check Availability for Your Child
+                  </label>
+                  {(filters.birthDate || filters.startDate) && (
+                    <button
+                      onClick={() =>
+                        setFilters({
+                          ...filters,
+                          birthDate: "",
+                          startDate: "",
+                        })
+                      }
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  Get personalized availability based on your child's birth date and desired start date
+                </p>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Child's Birth Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.birthDate}
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          birthDate: e.target.value,
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Desired Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e) =>
+                        setFilters({
+                          ...filters,
+                          startDate: e.target.value,
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+                  {filters.birthDate && filters.startDate && (
+                    <>
+                      {isFetchingAvailability ? (
+                        <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800 flex items-center gap-2">
+                          <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent" />
+                          Loading personalized availability...
+                        </div>
+                      ) : targetedAvailability && availabilityMap.size > 0 ? (
+                        <div className="bg-green-50 border border-green-200 rounded p-2 text-xs text-green-800">
+                          ✓ Showing personalized availability for {availabilityMap.size} kitas
+                        </div>
+                      ) : targetedAvailability && availabilityMap.size === 0 ? (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs text-yellow-800">
+                          No personalized availability found for these dates
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Custom Locations & Proximity Filter */}
+              <div className="mb-4 pb-4 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium">
+                    <MapPin className="w-4 h-4 inline mr-1" />
+                    My Locations
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">
+                  Add home, work, or other locations to filter by proximity
+                </p>
+
+                {/* List of custom locations */}
+                {customLocations.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {customLocations.map((location) => (
+                      <div
+                        key={location.id}
+                        className="flex items-center justify-between bg-gray-50 rounded p-2"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3 h-3 text-gray-500" />
+                            <span className="text-sm font-medium">{location.name}</span>
+                          </div>
+                          <span className="text-xs text-gray-500 ml-5">
+                            {location.type === 'home' ? '🏠 Home' : location.type === 'work' ? '💼 Work' : '📍 Other'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => removeLocation(location.id)}
+                          className="p-1 hover:bg-gray-200 rounded"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-600" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add location UI */}
+                {isAddingLocation ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3 space-y-2">
+                    <p className="text-xs text-blue-800 font-medium">
+                      Click on the map to set the location
+                    </p>
+                    <input
+                      type="text"
+                      placeholder="Location name (e.g., 'Home', 'Mom's work')"
+                      value={newLocationName}
+                      onChange={(e) => setNewLocationName(e.target.value)}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    />
+                    <select
+                      value={newLocationType}
+                      onChange={(e) => setNewLocationType(e.target.value as 'home' | 'work' | 'other')}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    >
+                      <option value="home">🏠 Home</option>
+                      <option value="work">💼 Work</option>
+                      <option value="other">📍 Other</option>
+                    </select>
+                    <button
+                      onClick={() => {
+                        setIsAddingLocation(false);
+                        setNewLocationName("");
+                      }}
+                      className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 rounded text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsAddingLocation(true)}
+                    className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-medium py-2 rounded text-sm flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Location
+                  </button>
+                )}
+
+                {/* Distance filter */}
+                {customLocations.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Maximum Distance (km)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0.5"
+                        max="20"
+                        step="0.5"
+                        value={filters.maxDistanceKm || ""}
+                        onChange={(e) =>
+                          setFilters({
+                            ...filters,
+                            maxDistanceKm: e.target.value ? parseFloat(e.target.value) : null,
+                          })
+                        }
+                        placeholder="Any distance"
+                        className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+                      />
+                      {filters.maxDistanceKm && (
+                        <button
+                          onClick={() =>
+                            setFilters({
+                              ...filters,
+                              maxDistanceKm: null,
+                            })
+                          }
+                          className="p-2 hover:bg-gray-100 rounded"
+                        >
+                          <X className="w-4 h-4 text-gray-600" />
+                        </button>
+                      )}
+                    </div>
+                    {filters.maxDistanceKm && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Showing kitas within {filters.maxDistanceKm}km of your locations
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Opening Hours */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
@@ -844,6 +1218,60 @@ export function KitaMap() {
         {/* Zoom control on the right side */}
         <ZoomControl position="topright" />
 
+        {/* Map click handler for adding custom locations */}
+        <MapClickHandler
+          isAddingLocation={isAddingLocation}
+          onLocationClick={handleAddLocation}
+        />
+
+        {/* Custom location markers */}
+        {customLocations.map((location) => {
+          const icon = L.divIcon({
+            className: "custom-location-marker",
+            html: `
+              <div style="
+                background-color: ${location.type === 'home' ? '#ef4444' : location.type === 'work' ? '#3b82f6' : '#8b5cf6'};
+                width: 32px;
+                height: 32px;
+                border-radius: 50% 50% 50% 0;
+                border: 3px solid white;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                transform: rotate(-45deg);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">
+                <span style="
+                  transform: rotate(45deg);
+                  font-size: 16px;
+                ">
+                  ${location.type === 'home' ? '🏠' : location.type === 'work' ? '💼' : '📍'}
+                </span>
+              </div>
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32],
+          });
+
+          return (
+            <Marker
+              key={location.id}
+              position={[location.latitude, location.longitude]}
+              icon={icon}
+            >
+              <Popup>
+                <div className="p-2">
+                  <h3 className="font-bold text-sm mb-1">{location.name}</h3>
+                  <p className="text-xs text-gray-600">
+                    {location.type === 'home' ? '🏠 Home' : location.type === 'work' ? '💼 Work' : '📍 Other'}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
         {/* Native Leaflet markers for performance */}
         {filteredKitas && (
           <MarkersLayer
@@ -851,6 +1279,7 @@ export function KitaMap() {
             onVisibleCountChange={setVisibleCount}
             selectedKitas={selectedKitas}
             toggleKitaSelection={toggleKitaSelection}
+            targetedAvailabilityMap={availabilityMap}
           />
         )}
       </MapContainer>
