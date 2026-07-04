@@ -1,8 +1,10 @@
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { Icon, DivIcon } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { useQuery } from '@tanstack/react-query';
-import { fetchKitas, type KitaDto } from '#/lib/api';
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { Icon, DivIcon } from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { useQuery } from "@tanstack/react-query";
+import { fetchKitas, type KitaDto } from "#/lib/api";
+import { api_01_response } from "#/data/api_01";
+import { transformData } from "#/data/transformData";
 
 // Munich city center coordinates
 const MUNICH_CENTER: [number, number] = [48.137154, 11.576124];
@@ -10,10 +12,10 @@ const MUNICH_CENTER: [number, number] = [48.137154, 11.576124];
 // Custom marker icons
 const createMarkerIcon = (hasVacancies: boolean) => {
   return new DivIcon({
-    className: 'custom-marker',
+    className: "custom-marker",
     html: `
       <div style="
-        background-color: ${hasVacancies ? '#10b981' : '#ef4444'};
+        background-color: ${hasVacancies ? "#10b981" : "#ef4444"};
         width: 24px;
         height: 24px;
         border-radius: 50%;
@@ -29,16 +31,22 @@ const createMarkerIcon = (hasVacancies: boolean) => {
 
 export function KitaMap() {
   // Fetch kitas - for now get all, later we can add bounding box filtering
-  const { data: kitas, isLoading, error } = useQuery({
-    queryKey: ['kitas'],
-    queryFn: () => fetchKitas(),
-  });
+  // const { data: kitas, isLoading, error } = useQuery({
+  //   queryKey: ['kitas'],
+  //   queryFn: () => fetchKitas(),
+  // });
+
+  const kitas = api_01_response.map(transformData);
+  const isLoading = false;
+  const error = null;
 
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">Error loading kitas</h2>
+          <h2 className="text-2xl font-bold text-red-600 mb-2">
+            Error loading kitas
+          </h2>
           <p className="text-gray-600">{(error as Error).message}</p>
         </div>
       </div>
@@ -62,7 +70,9 @@ export function KitaMap() {
         <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-4 z-[1000] max-w-xs">
           <h2 className="text-xl font-bold mb-2">Munich Kitas</h2>
           <p className="text-gray-600">
-            Found <span className="font-semibold text-gray-900">{kitas.length}</span> kitas
+            Found{" "}
+            <span className="font-semibold text-gray-900">{kitas.length}</span>{" "}
+            kitas
           </p>
           <div className="mt-3 flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
@@ -81,7 +91,7 @@ export function KitaMap() {
       <MapContainer
         center={MUNICH_CENTER}
         zoom={12}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: "100%", width: "100%" }}
         zoomControl={true}
       >
         {/* OpenStreetMap tiles - free, no token needed */}

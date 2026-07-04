@@ -1,0 +1,777 @@
+// https://kitafinder.muenchen.de/elternportal/en/api/einstellungen/vormerkungseinstellungen
+
+{
+    "childConfig": {
+        "unbornChildren": 1,
+        "secondCustodian": 1,
+        "gender": 1,
+        "maximumAge": 16,
+        "kinderfassungNurMitCode": false
+    },
+    "personConfig": {
+        "title": 1,
+        "email": 1,
+        "postErgaenzungSichtbar": false,
+        "postfachSichtbar": false,
+        "occupationConfig": {
+            "occupation": 2,
+            "workTime": null,
+            "workingHoursPerWeek": 2,
+            "workingDaysPerWeek": 2,
+            "seekingWork": 1,
+            "timeOfDay": 2,
+            "minWorkingHoursPerWeek": 0,
+            "maxWorkingHoursPerWeek": 80,
+            "minWorkingDaysPerWeek": 0,
+            "maxWorkingDaysPerWeek": 5,
+            "firstQualificationActive": true,
+            "profession": null
+        }
+    },
+    "placementConfig": {
+        "placementSwapped": 2,
+        "ranking": 2,
+        "numberOfRankings": 1,
+        "rankingReasons": {
+            "config": 1,
+            "dataList": [
+                "Geschwisterkind in der Einrichtung"
+            ]
+        },
+        "integrational": 1,
+        "dayCareSpotTypesFieldConfig": 2,
+        "dayCareSpotTypes": [
+            {
+                "dayCareSpotType": "Krippenplatz",
+                "afterSchoolCare": false,
+                "status": "OK"
+            },
+            {
+                "dayCareSpotType": "Kindergartenplatz",
+                "afterSchoolCare": false,
+                "status": "OK"
+            },
+            {
+                "dayCareSpotType": "Platz für Schulkind",
+                "afterSchoolCare": true,
+                "status": "OK"
+            }
+        ],
+        "schoolConfig": {
+            "schulbezirkMeinesKindes": 2,
+            "jahrgangsstufeZurAufnahme": 2,
+            "umzugInSchulbezirk": 1,
+            "schulbezirkZumGastschulantrag": 1,
+            "years": [
+                "noch nicht schulpflichtig",
+                "1. Klasse",
+                "2. Klasse",
+                "3. Klasse",
+                "4. Klasse",
+                "5. bis 9. Klasse"
+            ],
+            "schoolDistricts": [
+                {
+                    "id": 1,
+                    "name": "GRUNDSCHULE ASTRID-LINDGREN-STRASSE"
+                },
+                {
+                    "id": 2,
+                    "name": "GRUNDSCHULE MARKGRAFENSTRASSE 33"
+                },
+                {
+                    "id": 3,
+                    "name": "GRUNDSCHULE GERTRUD-BÄUMER-STRASSE"
+                },
+                {
+                    "id": 4,
+                    "name": "GRUNDSCHULE LINCOLNSTRASSE"
+                },
+                {
+                    "id": 5,
+                    "name": "GRUNDSCHULE GERASTRASSE"
+                },
+                {
+                    "id": 6,
+                    "name": "GRUNDSCHULE BÄCKERSTRASSE"
+                },
+                {
+                    "id": 7,
+                    "name": "GRUNDSCHULE LEHRER-WIRTH-STRASSE"
+                },
+                {
+                    "id": 8,
+                    "name": "GRUNDSCHULE MARGARETHE-DANZI-STR"
+                },
+                {
+                    "id": 9,
+                    "name": "GRUNDSCHULE AN DER SCHÄFERWIESE"
+                },
+                {
+                    "id": 10,
+                    "name": "GRUNDSCHULE HELMHOLTZSTRASSE"
+                },
+                {
+                    "id": 11,
+                    "name": "GRUNDSCHULE FRITZ-LUTZ-STRASSE"
+                },
+                {
+                    "id": 12,
+                    "name": "GRUNDSCHULE AGILOLFINGERPLATZ"
+                },
+                {
+                    "id": 13,
+                    "name": "GRUNDSCHULE ALFONSSTRASSE"
+                },
+                {
+                    "id": 14,
+                    "name": "GRUNDSCHULE AMPHIONPARK"
+                },
+                {
+                    "id": 15,
+                    "name": "GRUNDSCHULE BAD-SODEN-STRASSE"
+                },
+                {
+                    "id": 16,
+                    "name": "GRUNDSCHULE BALANSTRASSE"
+                },
+                {
+                    "id": 17,
+                    "name": "GRUNDSCHULE BAYERNPLATZ"
+                },
+                {
+                    "id": 18,
+                    "name": "GRUNDSCHULE BAZEILLESTR."
+                },
+                {
+                    "id": 19,
+                    "name": "GRUNDSCHULE BERG-AM-LAIM-STR."
+                },
+                {
+                    "id": 20,
+                    "name": "GRUNDSCHULE BERGMANNSTR."
+                },
+                {
+                    "id": 21,
+                    "name": "GRUNDSCHULE BERNAYSSTR."
+                },
+                {
+                    "id": 22,
+                    "name": "GRUNDSCHULE BERNER STR."
+                },
+                {
+                    "id": 23,
+                    "name": "GRUNDSCHULE BLUMENAUER STR."
+                },
+                {
+                    "id": 24,
+                    "name": "GRUNDSCHULE BOSCHETSRIEDER STR."
+                },
+                {
+                    "id": 25,
+                    "name": "GRUNDSCHULE CAMERLOHERSTR."
+                },
+                {
+                    "id": 26,
+                    "name": "GRUNDSCHULE CANISIUSPLATZ"
+                },
+                {
+                    "id": 27,
+                    "name": "GRUNDSCHULE DACHAUER STR."
+                },
+                {
+                    "id": 28,
+                    "name": "GRUNDSCHULE DOM-PEDRO-PL."
+                },
+                {
+                    "id": 29,
+                    "name": "GRUNDSCHULE DROSTE-HUELSHOFF-STR."
+                },
+                {
+                    "id": 30,
+                    "name": "GRUNDSCHULE EDUARD-SPRANGER-STR."
+                },
+                {
+                    "id": 31,
+                    "name": "GRUNDSCHULE ERNST-REUTER-STR."
+                },
+                {
+                    "id": 32,
+                    "name": "GRUNDSCHULE PFARRER-GRIMM-STRASSE"
+                },
+                {
+                    "id": 33,
+                    "name": "GRUNDSCHULE EVERSBUSCHSTR."
+                },
+                {
+                    "id": 34,
+                    "name": "GRUNDSCHULE FARINELLISTR."
+                },
+                {
+                    "id": 35,
+                    "name": "GRUNDSCHULE FELDBERGSTR."
+                },
+                {
+                    "id": 36,
+                    "name": "GRUNDSCHULE FELDMOCHINGER STR."
+                },
+                {
+                    "id": 37,
+                    "name": "GRUNDSCHULE FLURSTR."
+                },
+                {
+                    "id": 38,
+                    "name": "GRUNDSCHULE FORELLENSTR."
+                },
+                {
+                    "id": 39,
+                    "name": "GRUNDSCHULE FORSTENRIEDER ALLEE"
+                },
+                {
+                    "id": 40,
+                    "name": "GRUNDSCHULE AM GÄRTNERPLATZ"
+                },
+                {
+                    "id": 41,
+                    "name": "GRUNDSCHULE FRÖTTMANINGER STR."
+                },
+                {
+                    "id": 42,
+                    "name": "GRUNDSCHULE FROMUNDSTR."
+                },
+                {
+                    "id": 43,
+                    "name": "GRUNDSCHULE FUEHRICHSTR."
+                },
+                {
+                    "id": 44,
+                    "name": "GRUNDSCHULE FÜRSTENRIEDER STR."
+                },
+                {
+                    "id": 45,
+                    "name": "GRUNDSCHULE GAENSELIESELSTR."
+                },
+                {
+                    "id": 46,
+                    "name": "GRUNDSCHULE GEBELESTRASSE"
+                },
+                {
+                    "id": 47,
+                    "name": "GRUNDSCHULE GOTZINGER PLATZ"
+                },
+                {
+                    "id": 48,
+                    "name": "GRUNDSCHULE GOTZMANNSTRASSE"
+                },
+                {
+                    "id": 49,
+                    "name": "GRUNDSCHULE GRAFINGER STRASSE"
+                },
+                {
+                    "id": 50,
+                    "name": "GRUNDSCHULE GRANDLSTRASSE"
+                },
+                {
+                    "id": 51,
+                    "name": "GRUNDSCHULE GROSSHADERNER STRASSE"
+                },
+                {
+                    "id": 52,
+                    "name": "GRUNDSCHULE GULDEINSTRASSE"
+                },
+                {
+                    "id": 53,
+                    "name": "GRUNDSCHULE HAIMHAUSERSTRASSE"
+                },
+                {
+                    "id": 54,
+                    "name": "GRUNDSCHULE HALDENBERGERSTRASSE"
+                },
+                {
+                    "id": 55,
+                    "name": "GRUNDSCHULE HERRNSTRASSE"
+                },
+                {
+                    "id": 56,
+                    "name": "GRUNDSCHULE HERTERICHSTRASSE"
+                },
+                {
+                    "id": 57,
+                    "name": "GRUNDSCHULE FERNPASSSTR."
+                },
+                {
+                    "id": 58,
+                    "name": "GRUNDSCHULE HIRSCHBERGSTRASSE"
+                },
+                {
+                    "id": 59,
+                    "name": "GRUNDSCHULE HOCHSTR."
+                },
+                {
+                    "id": 60,
+                    "name": "GRUNDSCHULE HUGO-WOLF-STRASSE"
+                },
+                {
+                    "id": 61,
+                    "name": "GRUNDSCHULE ICHOSTRASSE"
+                },
+                {
+                    "id": 62,
+                    "name": "GRUNDSCHULE IMPLERSTRASSE"
+                },
+                {
+                    "id": 63,
+                    "name": "GRUNDSCHULE PESLMUELLERSTRASSE"
+                },
+                {
+                    "id": 64,
+                    "name": "GRUNDSCHULE ITTLINGERSTRASSE"
+                },
+                {
+                    "id": 65,
+                    "name": "GRUNDSCHULE KARL-MARX-RING"
+                },
+                {
+                    "id": 66,
+                    "name": "GRUNDSCHULE KIRCHENSTRASSE"
+                },
+                {
+                    "id": 67,
+                    "name": "GRUNDSCHULE KLENZESTRASSE"
+                },
+                {
+                    "id": 68,
+                    "name": "GRUNDSCHULE KNAPPERTSBUSCHSTRASSE"
+                },
+                {
+                    "id": 69,
+                    "name": "GRUNDSCHULE KOENIGSWIESER STRASSE"
+                },
+                {
+                    "id": 70,
+                    "name": "GRUNDSCHULE KONRAD-CELTIS-STRASSE"
+                },
+                {
+                    "id": 71,
+                    "name": "GRUNDSCHULE LEHRER-GOETZ-WEG"
+                },
+                {
+                    "id": 72,
+                    "name": "GRUNDSCHULE JENAER STRASSE"
+                },
+                {
+                    "id": 73,
+                    "name": "GRUNDSCHULE HILDEGARD-VON-BINGEN-ANGER"
+                },
+                {
+                    "id": 74,
+                    "name": "GRUNDSCHULE GILMSTR."
+                },
+                {
+                    "id": 75,
+                    "name": "GRUNDSCHULE LERCHENAUER STRASSE"
+                },
+                {
+                    "id": 76,
+                    "name": "GRUNDSCHULE LIMESSTRASSE"
+                },
+                {
+                    "id": 77,
+                    "name": "GRUNDSCHULE MANZOSTRASSE"
+                },
+                {
+                    "id": 78,
+                    "name": "GRUNDSCHULE MARIAHILFPLATZ"
+                },
+                {
+                    "id": 79,
+                    "name": "GRUNDSCHULE MARIA-WARD-STRASSE"
+                },
+                {
+                    "id": 80,
+                    "name": "GRUNDSCHULE BLUTENBURGSTR."
+                },
+                {
+                    "id": 81,
+                    "name": "GRUNDSCHULE MAX-KOLMSPERGER-STRASSE"
+                },
+                {
+                    "id": 82,
+                    "name": "GRUNDSCHULE OBERFOEHRINGER STRASSE"
+                },
+                {
+                    "id": 83,
+                    "name": "GRUNDSCHULE OSELSTRASSE"
+                },
+                {
+                    "id": 84,
+                    "name": "GRUNDSCHULE OSTPREUSSENSTRASSE"
+                },
+                {
+                    "id": 85,
+                    "name": "GRUNDSCHULE PAULCKESTRASSE"
+                },
+                {
+                    "id": 86,
+                    "name": "GRUNDSCHULE PFANZELTPLATZ"
+                },
+                {
+                    "id": 87,
+                    "name": "GRUNDSCHULE PLINGANSERSTRASSE"
+                },
+                {
+                    "id": 89,
+                    "name": "GRUNDSCHULE RAVENSBURGER RING"
+                },
+                {
+                    "id": 88,
+                    "name": "GRUNDSCHULE REGINA-ULLMANN-STRASSE"
+                },
+                {
+                    "id": 90,
+                    "name": "GRUNDSCHULE ROTBUCHENSTRASSE"
+                },
+                {
+                    "id": 91,
+                    "name": "GRUNDSCHULE ROTHPLETZSTRASSE"
+                },
+                {
+                    "id": 92,
+                    "name": "GRUNDSCHULE ST. ANNA-STRASSE"
+                },
+                {
+                    "id": 93,
+                    "name": "GRUNDSCHULE ST.-MARTIN-STRASSE"
+                },
+                {
+                    "id": 94,
+                    "name": "GRUNDSCHULE SCHERERPLATZ"
+                },
+                {
+                    "id": 95,
+                    "name": "GRUNDSCHULE HANSELMANNSTRASSE"
+                },
+                {
+                    "id": 96,
+                    "name": "GRUNDSCHULE SCHROBENHAUSENER STRASSE"
+                },
+                {
+                    "id": 97,
+                    "name": "GRUNDSCHULE SCHUBINWEG"
+                },
+                {
+                    "id": 98,
+                    "name": "GRUNDSCHULE SCHWANTHALERSTR."
+                },
+                {
+                    "id": 99,
+                    "name": "GRUNDSCHULE SCHWIND-/ZENTNERSTRASSE"
+                },
+                {
+                    "id": 100,
+                    "name": "GRUNDSCHULE SENFTENAUERSTRASSE"
+                },
+                {
+                    "id": 101,
+                    "name": "GRUNDSCHULE RENNERTSTRASSE"
+                },
+                {
+                    "id": 102,
+                    "name": "GRUNDSCHULE SIMMERNSTRASSE"
+                },
+                {
+                    "id": 103,
+                    "name": "GRUNDSCHULE BURMESTERSTR."
+                },
+                {
+                    "id": 104,
+                    "name": "GRUNDSCHULE STIELERSTRASSE"
+                },
+                {
+                    "id": 105,
+                    "name": "GRUNDSCHULE STREHLERANGER"
+                },
+                {
+                    "id": 106,
+                    "name": "GRUNDSCHULE STUNTZSTRASSE"
+                },
+                {
+                    "id": 107,
+                    "name": "GRUNDSCHULE SUEDL. AUFFAHRTSALLEE"
+                },
+                {
+                    "id": 108,
+                    "name": "GRUNDSCHULE TONI-PFUELF-STRASSE"
+                },
+                {
+                    "id": 109,
+                    "name": "GRUNDSCHULE TORQUATO-TASSO-STRASSE"
+                },
+                {
+                    "id": 110,
+                    "name": "GRUNDSCHULE TUERKENSTRASSE"
+                },
+                {
+                    "id": 111,
+                    "name": "GRUNDSCHULE TUMBLINGERSTRASSE"
+                },
+                {
+                    "id": 112,
+                    "name": "GRUNDSCHULE TURNERSTRASSE 46"
+                },
+                {
+                    "id": 113,
+                    "name": "GRUNDSCHULE WALDMEISTERSTRASSE"
+                },
+                {
+                    "id": 114,
+                    "name": "GRUNDSCHULE WALLISER STRASSE"
+                },
+                {
+                    "id": 115,
+                    "name": "GRUNDSCHULE WEILERSTRASSE"
+                },
+                {
+                    "id": 116,
+                    "name": "GRUNDSCHULE WEISSENSEESTRASSE"
+                },
+                {
+                    "id": 117,
+                    "name": "GRUNDSCHULE WERDENFELSSTRASSE"
+                },
+                {
+                    "id": 118,
+                    "name": "GRUNDSCHULE GUSTL-BAYRHAMMER-STRASSE"
+                },
+                {
+                    "id": 119,
+                    "name": "GRUNDSCHULE WILHELMSTRASSE"
+                },
+                {
+                    "id": 120,
+                    "name": "GRUNDSCHULE WINTHIRPLATZ"
+                },
+                {
+                    "id": 121,
+                    "name": "GRUNDSCHULE ZIELSTATTSTRASSE"
+                },
+                {
+                    "id": 122,
+                    "name": "GRUNDSCHULE THELOTTSTRASSE"
+                },
+                {
+                    "id": 123,
+                    "name": "GRUNDSCHULE KAFKASTRASSE"
+                },
+                {
+                    "id": 124,
+                    "name": "GRUNDSCHULE NADISTR."
+                },
+                {
+                    "id": 125,
+                    "name": "GRUNDSCHULE THEODOR-HEUSS-PLATZ"
+                },
+                {
+                    "id": 126,
+                    "name": "GRUNDSCHULE GUARDINISTRASSE"
+                },
+                {
+                    "id": 127,
+                    "name": "GRUNDSCHULE AM HEDERNFELD"
+                },
+                {
+                    "id": 128,
+                    "name": "VERBANDSGRUNDSCHULE MUENCHEN-KARLSFELD"
+                },
+                {
+                    "id": 129,
+                    "name": "GRUNDSCHULE DIESELSTR."
+                },
+                {
+                    "id": 130,
+                    "name": "GRUNDSCHULE DIETZFELBINGERPL."
+                },
+                {
+                    "id": 131,
+                    "name": "GRUNDSCHULE KEILBERTHSTRASSE"
+                },
+                {
+                    "id": 132,
+                    "name": "GRUNDSCHULE AN DER PFEUFERSTRASSE"
+                },
+                {
+                    "id": 133,
+                    "name": "GRUNDSCHULE ILSE-VON-TWARDOWSKI-PLATZ"
+                },
+                {
+                    "id": 134,
+                    "name": "GRUNDSCHULE SAMBERGERSTRASSE"
+                },
+                {
+                    "id": 135,
+                    "name": "GRUNDSCHULE BAIERBRUNNER STR."
+                },
+                {
+                    "id": 136,
+                    "name": "GRUNDSCHULE BAUHAUSPLATZ"
+                },
+                {
+                    "id": 137,
+                    "name": "GRUNDSCHULE JOSEPHSBURGSTR."
+                },
+                {
+                    "id": 138,
+                    "name": "GRUNDSCHULE VON-DER-PFORDTEN-STRASSE",
+                    "lageStrasse": "Von-der-Pfordten-Str.",
+                    "lageHausnummer": "80",
+                    "lagePostleitzahl": "80686",
+                    "lageOrt": "München",
+                    "lageBreitengrad": "48.135015",
+                    "lageLaengengrad": "11.495317"
+                },
+                {
+                    "id": 139,
+                    "name": "GRUNDSCHULE HERMINE-VON-PARISH-STRASSE"
+                },
+                {
+                    "id": 140,
+                    "name": "GRUNDSCHULE HELMUT-SCHMIDT-ALLEE"
+                },
+                {
+                    "id": 141,
+                    "name": "GRUNDSCHULE ROCKEFELLERSTR.",
+                    "lageStrasse": "Rockefellerstr.",
+                    "lageHausnummer": "11",
+                    "lagePostleitzahl": "80937",
+                    "lageOrt": "München"
+                },
+                {
+                    "id": 142,
+                    "name": "GRUNDSCHULE EMMY-NOETHER-STR.",
+                    "lageStrasse": "Emmy-Noether-Str.",
+                    "lageHausnummer": "5",
+                    "lagePostleitzahl": "80992",
+                    "lageOrt": "München"
+                },
+                {
+                    "id": 143,
+                    "name": "GRUNDSCHULE ST.-VEIT-STR."
+                },
+                {
+                    "id": 144,
+                    "name": "GRUNDSCHULE AUBINGER ALLEE"
+                },
+                {
+                    "id": 145,
+                    "name": "GRUNDSCHULE INFANTERIESTR."
+                },
+                {
+                    "id": 146,
+                    "name": "GRUNDSCHULE THEODOR-FISCHER-STR."
+                },
+                {
+                    "id": 147,
+                    "name": "GRUNDSCHULE PFEUFERSTRASSE"
+                },
+                {
+                    "id": 148,
+                    "name": "GRUNDSCHULE FRIEDERIKE-NADIG-ALLEE"
+                },
+                {
+                    "id": 149,
+                    "name": "GRUNDSCHULE GOTTFRIED-BÖHM-RING"
+                },
+                {
+                    "id": 150,
+                    "name": "GRUNDSCHULE MENARISTR."
+                }
+            ]
+        },
+        "dayCareDurationConfig": {
+            "configType": 2,
+            "config": 2
+        },
+        "scopeOfServicesTypes": {
+            "config": 2,
+            "dataList": [
+                "bis 2 Stunden",
+                "bis 3 Stunden",
+                "bis 4 Stunden",
+                "bis 5 Stunden",
+                "bis 6 Stunden",
+                "bis 7 Stunden",
+                "bis 8 Stunden",
+                "bis 9 Stunden",
+                "über 9 Stunden"
+            ]
+        },
+        "recommendedNumberOfDayCares": 50,
+        "mitNebenvertraege": false,
+        "mitWiderspruchZurWeitervermittlung": false,
+        "mitWiderspruchZurWeitervermittlungEinfach": false,
+        "maximaleAnzahlBewerbungenZuBetreuungswunsch": 0,
+        "tageFuerKuendigung": [],
+        "anmeldungZuEinemTerminJeAltersgruppe": false,
+        "kenntnisnahmeWechselInforamtionAnEinrichtung": false,
+        "betreuungsumfangValidieren": "DEAKTIVIERT",
+        "oeffnungszeitenValidieren": "HARTE_VALIDIERUNG",
+        "grundsaetzlicheBetreuungszeitVon": 21600000,
+        "grundsaetzlicheBetreuungszeitBis": 68400000
+    },
+    "registration": 2,
+    "reservationInAdvance": 12,
+    "concludingApprovals": [
+        2,
+        2
+    ],
+    "dataProtectionApprovals": [
+        2,
+        null
+    ],
+    "childCareBegin": 1,
+    "plannedInMigrationValidation": true,
+    "infoDerEinrichtungImHeader": true,
+    "mitSelbstauskunft": false,
+    "mitVertragsaenderungenAusElternkonto": false,
+    "datumErsterTagAktuellesKitajahr": [
+        2025,
+        9,
+        1
+    ],
+    "datumLetzterTagAktuellesKitajahr": [
+        2026,
+        8,
+        31
+    ],
+    "datumErsterTagNaechstesKitajahr": [
+        2026,
+        9,
+        1
+    ],
+    "datumLetzterTagNaechstesKitajahr": [
+        2027,
+        8,
+        31
+    ],
+    "mitPunkteBerechnung": false,
+    "mitWeiterbetreuung": false,
+    "mitElternumfrage": false,
+    "mitNachweisUpload": false,
+    "mitAntraege": true,
+    "stichtagBeginnAuswahlverfahren": "--01-31",
+    "stichtagBeginnAuswahlverfahrenHortanmeldungen": "--02-28",
+    "zusaetzlicheAdressPruefung": false,
+    "accountDatenLoeschen": true,
+    "anmeldungenVonAuswaertsAblehnen": false,
+    "hauptvergabezeitraumVonPlaetzenVon": "01.09.2026",
+    "hauptvergabezeitraumVonPlaetzenBis": "31.10.2026",
+    "chatbotHtmlTags": {
+        "id": "ut-widget",
+        "src": "https://bot.muenchen.de/kita-concierge/widget/widget/?widget_id=kitafinder",
+        "data-chat-endpoint": "/chat/widget-kitafinder/"
+    },
+    "integrativplatzAenderbar": true,
+    "mitLinkZumRechtsanspruch": false,
+    "mitLinkZuAntraegen": false,
+    "mitFerienbetreuung": false
+}
