@@ -54,7 +54,10 @@ export async function getDatabase(): Promise<Database> {
   db.run(`CREATE INDEX idx_longitude ON kitas(longitude)`);
   db.run(`CREATE INDEX idx_type ON kitas(type)`);
   db.run(`CREATE INDEX idx_barrierfree ON kitas(barrierfree)`);
+  db.run(`CREATE INDEX idx_integrational ON kitas(integrational)`);
   db.run(`CREATE INDEX idx_availability ON kitas(current_availability)`);
+  db.run(`CREATE INDEX idx_opening_hours_from ON kitas(opening_hours_from)`);
+  db.run(`CREATE INDEX idx_opening_hours_to ON kitas(opening_hours_to)`);
 
   // Prepare insert statement
   const stmt = db.prepare(`
@@ -195,4 +198,82 @@ export async function searchKitas(searchTerm: string) {
   `,
     [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]
   );
+}
+
+export interface KitaFilters {
+  search?: string;
+  hasAvailability?: boolean;
+  barrierfree?: boolean;
+  integrational?: boolean;
+  type?: string;
+  opensBefore?: number; // milliseconds
+  closesAfter?: number; // milliseconds
+}
+
+export async function getUniqueTypes(): Promise<string[]> {
+  const results = await query<{ type: string }>(`
+    SELECT DISTINCT type
+    FROM kitas
+    WHERE type IS NOT NULL
+    ORDER BY type
+  `);
+  return results.map(r => r.type);
+}
+
+export async function filterKitas(filters: KitaFilters) {
+  const whereClauses: string[] = [
+    'latitude IS NOT NULL',
+    'longitude IS NOT NULL',
+  ];
+  const params: any[] = [];
+
+  // Search filter (name, institution, district, street)
+  if (filters.search && filters.search.trim()) {
+    whereClauses.push(
+      '(name LIKE ? OR institution LIKE ? OR district LIKE ? OR street LIKE ?)'
+    );
+    const searchPattern = `%${filters.search}%`;
+    params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+  }
+
+  // Availability filter
+  if (filters.hasAvailability) {
+    whereClauses.push('current_availability > 0');
+  }
+
+  // Barrierfree filter
+  if (filters.barrierfree) {
+    whereClauses.push('barrierfree = 1');
+  }
+
+  // Integrational filter
+  if (filters.integrational) {
+    whereClauses.push('integrational = 1');
+  }
+
+  // Type filter
+  if (filters.type) {
+    whereClauses.push('type = ?');
+    params.push(filters.type);
+  }
+
+  // Opening hours - opens before specified time
+  if (filters.opensBefore !== undefined && filters.opensBefore > 0) {
+    whereClauses.push('opening_hours_from <= ?');
+    params.push(filters.opensBefore);
+  }
+
+  // Closing hours - closes after specified time
+  if (filters.closesAfter !== undefined && filters.closesAfter > 0) {
+    whereClauses.push('opening_hours_to >= ?');
+    params.push(filters.closesAfter);
+  }
+
+  const sql = `
+    SELECT * FROM kitas
+    WHERE ${whereClauses.join(' AND ')}
+    ORDER BY name
+  `;
+
+  return query(sql, params);
 }

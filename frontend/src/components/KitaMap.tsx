@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { DivIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useQuery } from '@tanstack/react-query';
-import { getAllKitas } from '#/data/db';
+import { filterKitas, getUniqueTypes } from '#/data/db';
 import { Search, Filter, X } from 'lucide-react';
 
 // Munich city center coordinates
@@ -44,38 +44,56 @@ interface Filters {
   closesAfter: string;
 }
 
-// Custom marker icons
-const createMarkerIcon = (hasAvailability: boolean) => {
-  return new DivIcon({
-    className: 'custom-marker',
-    html: `
-      <div style="
-        background-color: ${hasAvailability ? '#10b981' : '#6b7280'};
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      "></div>
-    `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12],
-  });
-};
+// Custom marker icons - memoized to prevent recreation
+const availableIcon = new DivIcon({
+  className: 'custom-marker',
+  html: `
+    <div style="
+      background-color: #10b981;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    "></div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -12],
+});
 
-function MapUpdater({ kitas }: { kitas: Kita[] }) {
+const unavailableIcon = new DivIcon({
+  className: 'custom-marker',
+  html: `
+    <div style="
+      background-color: #6b7280;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    "></div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -12],
+});
+
+const MapUpdater = memo(({ kitas }: { kitas: Kita[] }) => {
   const map = useMap();
 
   useEffect(() => {
     if (kitas.length > 0) {
+      const start = performance.now();
       const bounds = kitas.map((k) => [k.latitude, k.longitude] as [number, number]);
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+      const end = performance.now();
+      console.log(`Map bounds update took ${(end - start).toFixed(2)}ms`);
     }
   }, [kitas, map]);
 
   return null;
-}
+});
 
 export function KitaMap() {
   const [filters, setFilters] = useState<Filters>({
@@ -88,18 +106,6 @@ export function KitaMap() {
     closesAfter: '',
   });
   const [showFilters, setShowFilters] = useState(false);
-
-  // Fetch kitas from SQLite
-  const { data: allKitas, isLoading, error } = useQuery({
-    queryKey: ['kitas-sqlite'],
-    queryFn: getAllKitas,
-  });
-
-  // Get unique values for filter dropdowns
-  const uniqueTypes = useMemo(() => {
-    if (!allKitas) return [];
-    return [...new Set(allKitas.map((k: Kita) => k.type))].filter(Boolean).sort();
-  }, [allKitas]);
 
   // Helper to convert time string to milliseconds
   const timeToMs = (timeStr: string): number => {
@@ -115,61 +121,43 @@ export function KitaMap() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
 
-  // Apply filters
-  const filteredKitas = useMemo(() => {
-    if (!allKitas) return [];
+  // Fetch unique types for dropdown (only runs once)
+  const { data: uniqueTypes = [] } = useQuery({
+    queryKey: ['kitas-unique-types'],
+    queryFn: getUniqueTypes,
+  });
 
-    return (allKitas as Kita[]).filter((kita) => {
-      // Search filter
-      if (filters.search) {
-        const search = filters.search.toLowerCase();
-        const matchesSearch =
-          kita.name?.toLowerCase().includes(search) ||
-          kita.institution?.toLowerCase().includes(search) ||
-          kita.district?.toLowerCase().includes(search) ||
-          kita.street?.toLowerCase().includes(search);
-        if (!matchesSearch) return false;
-      }
+  // Fetch filtered kitas using SQL (runs on every filter change)
+  const { data: filteredKitas, isLoading, isFetching, error } = useQuery({
+    queryKey: ['kitas-filtered', filters],
+    queryFn: async () => {
+      const start = performance.now();
+      const result = await filterKitas({
+        search: filters.search || undefined,
+        hasAvailability: filters.hasAvailability || undefined,
+        barrierfree: filters.barrierfree || undefined,
+        integrational: filters.integrational || undefined,
+        type: filters.type || undefined,
+        opensBefore: filters.opensBefore ? timeToMs(filters.opensBefore) : undefined,
+        closesAfter: filters.closesAfter ? timeToMs(filters.closesAfter) : undefined,
+      });
+      const end = performance.now();
+      console.log(`SQL filter query took ${(end - start).toFixed(2)}ms, returned ${result.length} results`);
+      return result;
+    },
+    staleTime: 0,
+    placeholderData: (previousData) => previousData, // Keep showing previous results while fetching
+  });
 
-      // Availability filter
-      if (filters.hasAvailability && (!kita.current_availability || kita.current_availability <= 0)) {
-        return false;
-      }
-
-      // Barrierfree filter
-      if (filters.barrierfree && !kita.barrierfree) {
-        return false;
-      }
-
-      // Integrational filter
-      if (filters.integrational && !kita.integrational) {
-        return false;
-      }
-
-      // Type filter
-      if (filters.type && kita.type !== filters.type) {
-        return false;
-      }
-
-      // Opening hours filter - opens before specified time
-      if (filters.opensBefore) {
-        const openBeforeMs = timeToMs(filters.opensBefore);
-        if (!kita.opening_hours_from || kita.opening_hours_from > openBeforeMs) {
-          return false;
-        }
-      }
-
-      // Closing hours filter - closes after specified time
-      if (filters.closesAfter) {
-        const closeAfterMs = timeToMs(filters.closesAfter);
-        if (!kita.opening_hours_to || kita.opening_hours_to < closeAfterMs) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [allKitas, filters]);
+  // Get count of all kitas for display (cheap query)
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ['kitas-count'],
+    queryFn: async () => {
+      const db = await import('#/data/db').then(m => m.getDatabase());
+      const result = db.exec('SELECT COUNT(*) as count FROM kitas WHERE latitude IS NOT NULL');
+      return result[0]?.values[0]?.[0] as number || 0;
+    },
+  });
 
   const resetFilters = () => {
     setFilters({
@@ -208,13 +196,21 @@ export function KitaMap() {
 
   return (
     <div className="relative w-full h-screen">
-      {/* Loading overlay */}
-      {isLoading && (
+      {/* Loading overlay - only show on initial load, not on filter changes */}
+      {isLoading && !filteredKitas && (
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-[1000]">
           <div className="text-center">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4" />
             <p className="text-lg font-medium">Loading kitas...</p>
           </div>
+        </div>
+      )}
+
+      {/* Small loading indicator while filtering */}
+      {isFetching && filteredKitas && (
+        <div className="absolute top-20 right-4 bg-white rounded-lg shadow-lg px-3 py-2 z-[1000] flex items-center gap-2">
+          <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent" />
+          <span className="text-sm text-gray-600">Updating...</span>
         </div>
       )}
 
@@ -354,8 +350,8 @@ export function KitaMap() {
           {/* Results Count */}
           <div className="bg-white rounded-lg shadow-lg p-3">
             <p className="text-sm text-gray-600">
-              Showing <span className="font-bold text-gray-900">{filteredKitas.length}</span> of{' '}
-              <span className="font-bold text-gray-900">{allKitas?.length || 0}</span> kitas
+              Showing <span className="font-bold text-gray-900">{filteredKitas?.length || 0}</span> of{' '}
+              <span className="font-bold text-gray-900">{totalCount}</span> kitas
             </p>
           </div>
         </div>
@@ -375,14 +371,14 @@ export function KitaMap() {
         />
 
         {/* Auto-fit bounds to filtered results */}
-        <MapUpdater kitas={filteredKitas} />
+        {filteredKitas && filteredKitas.length > 0 && <MapUpdater kitas={filteredKitas} />}
 
         {/* Kita markers */}
-        {filteredKitas.map((kita) => (
+        {filteredKitas?.map((kita) => (
           <Marker
             key={kita.id}
             position={[kita.latitude, kita.longitude]}
-            icon={createMarkerIcon(kita.current_availability > 0)}
+            icon={kita.current_availability > 0 ? availableIcon : unavailableIcon}
           >
             <Popup>
               <div className="p-2 min-w-[250px]">

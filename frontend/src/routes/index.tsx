@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { lazy, Suspense, useEffect, useState } from 'react'
 
 // Lazy load the map component to avoid SSR issues with Leaflet
-const KitaMap = lazy(() => import('#/components/KitaMap').then(m => ({ default: m.KitaMap })))
+const KitaMap = lazy(() => import('#/components/KitaMapOptimized').then(m => ({ default: m.KitaMap })))
 
 export const Route = createFileRoute('/')({
   component: Home,
