@@ -5,7 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useQuery } from "@tanstack/react-query";
 import { filterKitas, getUniqueTypes } from "#/data/db";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Mail, Heart, Copy, ExternalLink } from "lucide-react";
 
 // Munich city center coordinates
 const MUNICH_CENTER: [number, number] = [48.137154, 11.576124];
@@ -45,60 +45,46 @@ interface Filters {
   closesAfter: string;
 }
 
-// Create icon HTML strings (reused)
-const createIconHtml = (hasAvailability: boolean) => `
-  <div style="
-    background-color: ${hasAvailability ? "#10b981" : "#6b7280"};
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  "></div>
-`;
+// Create icon function that accounts for availability and favorite status
+const createMarkerIcon = (hasAvailability: boolean, isFavorite: boolean) => {
+  let bgColor;
+  if (isFavorite) {
+    bgColor = "#ef4444"; // red for favorites
+  } else if (hasAvailability) {
+    bgColor = "#10b981"; // green for available
+  } else {
+    bgColor = "#6b7280"; // gray for unavailable
+  }
 
-// Create icon HTML strings (reused)
-const availableIcon = L.divIcon({
-  className: "custom-marker",
-  html: `
-    <div style="
-      background-color: #10b981;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    "></div>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-  popupAnchor: [0, -12],
-});
-
-const unavailableIcon = L.divIcon({
-  className: "custom-marker",
-  html: `
-    <div style="
-      background-color: #6b7280;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    "></div>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-  popupAnchor: [0, -12],
-});
+  return L.divIcon({
+    className: "custom-marker",
+    html: `
+      <div style="
+        background-color: ${bgColor};
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      "></div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+  });
+};
 
 // Component that manages viewport-filtered markers with clustering
 function MarkersLayer({
   kitas,
   onVisibleCountChange,
+  selectedKitas,
+  toggleKitaSelection,
 }: {
   kitas: Kita[];
   onVisibleCountChange: (count: number) => void;
+  selectedKitas: Set<number>;
+  toggleKitaSelection: (kitaId: number) => void;
 }) {
   const map = useMap();
   const isInitialLoadRef = useRef(true);
@@ -205,8 +191,9 @@ function MarkersLayer({
       }}
     >
       {visibleKitas.map((kita) => {
-        const icon =
-          kita.current_availability > 0 ? availableIcon : unavailableIcon;
+        const isFavorite = selectedKitas.has(kita.id);
+        const hasAvailability = kita.current_availability > 0;
+        const icon = createMarkerIcon(hasAvailability, isFavorite);
 
         return (
           <Marker
@@ -216,7 +203,22 @@ function MarkersLayer({
           >
             <Popup>
               <div className="p-2 min-w-[250px]">
-                <h3 className="font-bold text-lg mb-1">{kita.name}</h3>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h3 className="font-bold text-lg">{kita.name}</h3>
+                  <button
+                    onClick={() => toggleKitaSelection(kita.id)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      selectedKitas.has(kita.id)
+                        ? "bg-red-100 text-red-800 hover:bg-red-200"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    <Heart
+                      className={`w-3 h-3 ${selectedKitas.has(kita.id) ? "fill-current" : ""}`}
+                    />
+                    {selectedKitas.has(kita.id) ? "Saved" : "Save"}
+                  </button>
+                </div>
                 <p className="text-xs text-gray-500 mb-2">{kita.institution}</p>
 
                 {kita.current_availability > 0 ? (
@@ -292,6 +294,31 @@ export function KitaMap() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
+  const [selectedKitas, setSelectedKitas] = useState<Set<number>>(new Set());
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  // Initialize selected kitas from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const savedParam = params.get('saved');
+    if (savedParam) {
+      const ids = savedParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      setSelectedKitas(new Set(ids));
+    }
+  }, []);
+
+  // Update URL when selection changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (selectedKitas.size > 0) {
+      params.set('saved', Array.from(selectedKitas).sort((a, b) => a - b).join(','));
+    } else {
+      params.delete('saved');
+    }
+    const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [selectedKitas]);
 
   // Helper to convert time string to milliseconds
   const timeToMs = (timeStr: string): number => {
@@ -371,6 +398,94 @@ export function KitaMap() {
     (filters.type ? 1 : 0) +
     (filters.opensBefore ? 1 : 0) +
     (filters.closesAfter ? 1 : 0);
+
+  const msToTime = (ms: number): string => {
+    const hours = Math.floor(ms / (3600 * 1000));
+    const minutes = Math.floor((ms % (3600 * 1000)) / (60 * 1000));
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  const toggleKitaSelection = (kitaId: number) => {
+    setSelectedKitas(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(kitaId)) {
+        newSet.delete(kitaId);
+      } else {
+        newSet.add(kitaId);
+      }
+      return newSet;
+    });
+  };
+
+  const getShareUrl = () => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const ids = Array.from(selectedKitas).sort((a, b) => a - b).join(',');
+    return `${baseUrl}?saved=${ids}`;
+  };
+
+  const createEmailBody = () => {
+    if (selectedKitas.size === 0 || !filteredKitas) return '';
+
+    const selected = filteredKitas.filter(k => selectedKitas.has(k.id));
+    const shareUrl = getShareUrl();
+
+    let body = `Munich Kitas - My Shortlist (${selected.length} kitas)\n\n`;
+    body += `View this shortlist online:\n${shareUrl}\n\n`;
+    body += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+
+    selected.forEach((kita, idx) => {
+      body += `${idx + 1}. ${kita.name}\n`;
+      body += `   Institution: ${kita.institution}\n`;
+
+      if (kita.current_availability > 0) {
+        body += `   ✓ ${kita.current_availability} spots available\n`;
+      } else {
+        body += `   ✗ No availability info\n`;
+      }
+
+      if (kita.street) {
+        body += `   Address: ${kita.street} ${kita.number}, ${kita.postalcode} ${kita.town}\n`;
+      }
+
+      if (kita.district) {
+        body += `   District: ${kita.district}\n`;
+      }
+
+      if (kita.opening_hours_from && kita.opening_hours_to) {
+        body += `   Hours: ${msToTime(kita.opening_hours_from)} - ${msToTime(kita.opening_hours_to)}\n`;
+      }
+
+      const features = [];
+      if (kita.barrierfree === 1) features.push('Barrier-free');
+      if (kita.integrational === 1) features.push('Integrational');
+      if (features.length > 0) {
+        body += `   Features: ${features.join(', ')}\n`;
+      }
+
+      body += `   Google Maps: https://www.google.com/maps/search/?api=1&query=${kita.latitude},${kita.longitude}\n`;
+      body += '\n';
+    });
+
+    return body;
+  };
+
+  const handleCopyToClipboard = async () => {
+    const body = createEmailBody();
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleSendEmail = () => {
+    const subject = `Munich Kitas Shortlist - ${selectedKitas.size} locations`;
+    const body = createEmailBody();
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
+  };
 
   if (error) {
     return (
@@ -702,9 +817,74 @@ export function KitaMap() {
           <MarkersLayer
             kitas={filteredKitas}
             onVisibleCountChange={setVisibleCount}
+            selectedKitas={selectedKitas}
+            toggleKitaSelection={toggleKitaSelection}
           />
         )}
       </MapContainer>
+
+      {/* Email Button - Fixed Bottom Right */}
+      {selectedKitas.size > 0 && (
+        <button
+          onClick={() => setShowEmailModal(true)}
+          className="fixed bottom-6 right-6 z-1000 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 transition-all"
+        >
+          <Mail className="w-5 h-5" />
+          Email {selectedKitas.size} location{selectedKitas.size > 1 ? "s" : ""} to myself
+        </button>
+      )}
+
+      {/* Email Preview Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 z-2000 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold">Email Preview</h2>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <pre className="text-sm whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded border">
+                {createEmailBody()}
+              </pre>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-3 p-4 border-t bg-gray-50">
+              <div className="flex items-center gap-2">
+                {copySuccess && (
+                  <span className="text-sm text-green-600 font-medium">
+                    ✓ Copied!
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopyToClipboard}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 font-medium"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy to Clipboard
+                </button>
+                <button
+                  onClick={handleSendEmail}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open in Email Client
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
