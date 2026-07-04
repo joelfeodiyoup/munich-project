@@ -13,8 +13,10 @@ export async function getDatabase(): Promise<Database> {
   const startTime = performance.now();
 
   // Initialize sql.js with WASM file
+  // Use BASE_URL to handle GitHub Pages deployment with base path
+  const baseUrl = import.meta.env.BASE_URL || '/';
   const SQL = await initSqlJs({
-    locateFile: (file) => `/sql-wasm.wasm`,
+    locateFile: (file) => `${baseUrl}sql-wasm.wasm`,
   });
 
   // Create empty database in memory
